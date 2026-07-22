@@ -209,6 +209,28 @@
   .confirm-details dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin-top:8px;}
   .confirm-details dt:first-child{margin-top:0;}
   .confirm-details dd{margin:1px 0 0;color:var(--ink);}
+
+  #adminControls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  /* Modal: administrar profesores y cursos */
+  .modal-box-wide{max-width:460px;}
+  .admin-list-section{margin-bottom:18px;}
+  .admin-list-section h4{font-family:'Fraunces',serif;font-size:15px;margin:0 0 8px;color:var(--pine);}
+  .admin-list-add{display:flex;gap:6px;margin-bottom:10px;}
+  .admin-list-add input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;}
+  .admin-list-add input:focus{border-color:var(--pine-soft);}
+  .admin-list-add button{border:none;background:var(--pine);color:#fff;border-radius:8px;padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  .admin-list-add button:hover{background:var(--pine-soft);}
+  .admin-list-rows{max-height:160px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;}
+  .admin-list-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px;}
+  .admin-list-row:last-child{border-bottom:none;}
+  .admin-list-row span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .admin-list-row input[type=text]{flex:1;padding:5px 8px;border:1px solid var(--pine-soft);border-radius:6px;font-size:13px;font-family:'Inter',sans-serif;outline:none;}
+  .admin-list-row button{border:none;background:none;font-size:12px;font-weight:600;cursor:pointer;padding:3px 6px;font-family:'Inter',sans-serif;white-space:nowrap;}
+  .admin-list-row .btn-edit{color:var(--pine-soft);}
+  .admin-list-row .btn-del{color:var(--brick);}
+  .admin-list-row .btn-save{color:var(--pine);}
+  .admin-list-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
 </style>
 </head>
 <body>
@@ -247,6 +269,34 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn-cancel" id="btnConfirmCancelarCerrar">Cancelar</button>
         <button type="button" class="modal-btn-danger" id="btnConfirmCancelarEliminar">Eliminar reserva</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="adminListasOverlay">
+    <div class="modal-box modal-box-wide">
+      <h3>⚙️ Administrar profesores y cursos</h3>
+
+      <div class="admin-list-section">
+        <h4>Profesores</h4>
+        <div class="admin-list-add">
+          <input type="text" id="nuevoProfesorInput" placeholder="Nombre del profesor">
+          <button type="button" id="btnAgregarProfesor">Agregar</button>
+        </div>
+        <div class="admin-list-rows" id="listaProfesores"></div>
+      </div>
+
+      <div class="admin-list-section">
+        <h4>Cursos / materias</h4>
+        <div class="admin-list-add">
+          <input type="text" id="nuevoCursoInput" placeholder="Nombre del curso">
+          <button type="button" id="btnAgregarCurso">Agregar</button>
+        </div>
+        <div class="admin-list-rows" id="listaCursos"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="modal-btn-cancel" id="btnCerrarAdminListas">Cerrar</button>
       </div>
     </div>
   </div>
@@ -306,11 +356,15 @@
       <div class="row2" style="margin-top:16px;">
         <div class="field">
           <label>Nombre del profesor</label>
-          <input type="text" id="fNombre" placeholder="Ej: Ana Pérez">
+          <select id="fNombre">
+            <option value="">Seleccioná un profesor…</option>
+          </select>
         </div>
         <div class="field">
           <label>Materia / curso</label>
-          <input type="text" id="fMateria" placeholder="Ej: Informática 3ºB">
+          <select id="fMateria">
+            <option value="">Seleccioná un curso…</option>
+          </select>
         </div>
       </div>
 
@@ -389,6 +443,12 @@ let adminPassword = null;
 // Evita que la actualización automática pise una operación en curso (reservar/cancelar)
 let isBusy = false;
 
+// ---------- profesores y cursos (se administran desde el modal de admin) ----------
+let profesoresList = [];
+let cursosList = [];
+let editandoProfesorId = null;
+let editandoCursoId = null;
+
 function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
 
 async function loadReservas(){
@@ -432,15 +492,179 @@ async function verificarAdminRemoto(password){
   return !!data.ok;
 }
 
+/* ---------- profesores y cursos: carga (pública) y escritura (solo admin) ---------- */
+async function loadProfesores(){
+  if(!scriptConfigurado()) return;
+  try{
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=listProfesores`);
+    const data = await res.json();
+    profesoresList = data.items || [];
+  }catch(e){ /* se mantiene la lista anterior si falla */ }
+}
+async function loadCursos(){
+  if(!scriptConfigurado()) return;
+  try{
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=listCursos`);
+    const data = await res.json();
+    cursosList = data.items || [];
+  }catch(e){ /* se mantiene la lista anterior si falla */ }
+}
+
+async function agregarProfesorRemoto(nombre){
+  const url = `${APPS_SCRIPT_URL}?action=agregarProfesor&nombre=${encodeURIComponent(nombre)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+async function editarProfesorRemoto(id, nombre){
+  const url = `${APPS_SCRIPT_URL}?action=editarProfesor&id=${encodeURIComponent(id)}&nombre=${encodeURIComponent(nombre)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+async function eliminarProfesorRemoto(id){
+  const url = `${APPS_SCRIPT_URL}?action=eliminarProfesor&id=${encodeURIComponent(id)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+async function agregarCursoRemoto(nombre){
+  const url = `${APPS_SCRIPT_URL}?action=agregarCurso&nombre=${encodeURIComponent(nombre)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+async function editarCursoRemoto(id, nombre){
+  const url = `${APPS_SCRIPT_URL}?action=editarCurso&id=${encodeURIComponent(id)}&nombre=${encodeURIComponent(nombre)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+async function eliminarCursoRemoto(id){
+  const url = `${APPS_SCRIPT_URL}?action=eliminarCurso&id=${encodeURIComponent(id)}&password=${encodeURIComponent(adminPassword)}`;
+  return (await fetch(url)).json();
+}
+
+// Carga los <select> del formulario de reserva, conservando lo ya elegido si sigue existiendo
+function renderSelectsFormulario(){
+  const fNombre = document.getElementById('fNombre');
+  const prevNombre = fNombre.value;
+  fNombre.innerHTML = '<option value="">Seleccioná un profesor…</option>' +
+    profesoresList.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+  if(profesoresList.some(p => p.nombre === prevNombre)) fNombre.value = prevNombre;
+
+  const fMateria = document.getElementById('fMateria');
+  const prevMateria = fMateria.value;
+  fMateria.innerHTML = '<option value="">Seleccioná un curso…</option>' +
+    cursosList.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+  if(cursosList.some(c => c.nombre === prevMateria)) fMateria.value = prevMateria;
+}
+
+/* ---------- modal: administrar profesores y cursos ---------- */
+function abrirModalAdminListas(){
+  editandoProfesorId = null;
+  editandoCursoId = null;
+  renderAdminListas();
+  document.getElementById('adminListasOverlay').classList.add('show');
+}
+function cerrarModalAdminListas(){
+  document.getElementById('adminListasOverlay').classList.remove('show');
+}
+
+function renderListaAdmin(containerId, lista, tipo, editandoId){
+  const cont = document.getElementById(containerId);
+  if(lista.length === 0){
+    cont.innerHTML = `<div class="admin-list-empty">No hay registros todavía.</div>`;
+    return;
+  }
+  cont.innerHTML = lista.map(item => {
+    if(item.id === editandoId){
+      return `
+        <div class="admin-list-row">
+          <input type="text" value="${item.nombre.replace(/"/g,'&quot;')}" id="editInput_${tipo}_${item.id}">
+          <button class="btn-save" data-accion="guardar" data-id="${item.id}">Guardar</button>
+          <button class="btn-del" data-accion="cancelarEdicion" data-id="${item.id}">Cancelar</button>
+        </div>`;
+    }
+    return `
+      <div class="admin-list-row">
+        <span>${item.nombre}</span>
+        <button class="btn-edit" data-accion="editar" data-id="${item.id}">Editar</button>
+        <button class="btn-del" data-accion="eliminar" data-id="${item.id}">Eliminar</button>
+      </div>`;
+  }).join('');
+
+  cont.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => onAccionListaAdmin(tipo, btn.getAttribute('data-accion'), btn.getAttribute('data-id')));
+  });
+}
+
+function renderAdminListas(){
+  renderListaAdmin('listaProfesores', profesoresList, 'profesor', editandoProfesorId);
+  renderListaAdmin('listaCursos', cursosList, 'curso', editandoCursoId);
+}
+
+async function onAccionListaAdmin(tipo, accion, id){
+  const esProfesor = tipo === 'profesor';
+  const lista = esProfesor ? profesoresList : cursosList;
+
+  if(accion === 'editar'){
+    if(esProfesor) editandoProfesorId = id; else editandoCursoId = id;
+    renderAdminListas();
+    return;
+  }
+  if(accion === 'cancelarEdicion'){
+    if(esProfesor) editandoProfesorId = null; else editandoCursoId = null;
+    renderAdminListas();
+    return;
+  }
+  if(accion === 'guardar'){
+    const input = document.getElementById(`editInput_${tipo}_${id}`);
+    const nuevoNombre = input.value.trim();
+    if(!nuevoNombre) return;
+    const data = esProfesor ? await editarProfesorRemoto(id, nuevoNombre) : await editarCursoRemoto(id, nuevoNombre);
+    if(data.error){ alert(data.error); return; }
+    if(esProfesor){ editandoProfesorId = null; await loadProfesores(); } else { editandoCursoId = null; await loadCursos(); }
+    renderAdminListas();
+    renderSelectsFormulario();
+    return;
+  }
+  if(accion === 'eliminar'){
+    const item = lista.find(x => x.id === id);
+    if(!confirm(`¿Eliminar "${item ? item.nombre : ''}"? Esta acción no se puede deshacer.`)) return;
+    const data = esProfesor ? await eliminarProfesorRemoto(id) : await eliminarCursoRemoto(id);
+    if(data.error){ alert(data.error); return; }
+    if(esProfesor) await loadProfesores(); else await loadCursos();
+    renderAdminListas();
+    renderSelectsFormulario();
+    return;
+  }
+}
+
+async function onAgregarProfesor(){
+  const input = document.getElementById('nuevoProfesorInput');
+  const nombre = input.value.trim();
+  if(!nombre) return;
+  const data = await agregarProfesorRemoto(nombre);
+  if(data.error){ alert(data.error); return; }
+  input.value = '';
+  await loadProfesores();
+  renderAdminListas();
+  renderSelectsFormulario();
+}
+async function onAgregarCurso(){
+  const input = document.getElementById('nuevoCursoInput');
+  const nombre = input.value.trim();
+  if(!nombre) return;
+  const data = await agregarCursoRemoto(nombre);
+  if(data.error){ alert(data.error); return; }
+  input.value = '';
+  await loadCursos();
+  renderAdminListas();
+  renderSelectsFormulario();
+}
+
 /* ---------- modo administrador: UI ---------- */
 function renderAdminControls(){
   const cont = document.getElementById('adminControls');
   if(adminMode){
     cont.innerHTML = `
       <div class="admin-badge"><span class="dot"></span>Modo administrador activo</div>
+      <button type="button" class="admin-btn" id="btnAbrirListas">⚙️ Administrar profesores y cursos</button>
       <button type="button" class="admin-exit-btn" id="btnSalirAdmin">Salir del modo administrador</button>
     `;
     document.getElementById('btnSalirAdmin').addEventListener('click', salirModoAdmin);
+    document.getElementById('btnAbrirListas').addEventListener('click', abrirModalAdminListas);
   } else {
     cont.innerHTML = `<div class="admin-btn" id="btnAbrirAdmin">🔒 Modo administrador</div>`;
     document.getElementById('btnAbrirAdmin').addEventListener('click', abrirModalAdmin);
@@ -903,7 +1127,10 @@ async function autoRefresh(){
   if(isBusy || !scriptConfigurado()) return;
   try{
     await loadReservas();
+    await loadProfesores();
+    await loadCursos();
     renderAll();
+    renderSelectsFormulario();
   }catch(e){
     // si falla, se mantienen los últimos datos buenos en pantalla; se reintenta en el próximo ciclo
   }
@@ -924,12 +1151,15 @@ async function init(){
   } else {
     try{
       await loadReservas();
+      await loadProfesores();
+      await loadCursos();
     }catch(e){
       document.getElementById('agendaList').innerHTML =
         '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
     }
   }
   renderAll();
+  renderSelectsFormulario();
 
   document.getElementById('dateInput').addEventListener('change', renderAll);
   document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
@@ -949,6 +1179,15 @@ async function init(){
   document.getElementById('btnConfirmCancelarEliminar').addEventListener('click', onConfirmarEliminar);
   document.getElementById('confirmCancelOverlay').addEventListener('click', (ev) => {
     if(ev.target.id === 'confirmCancelOverlay') cerrarModalConfirmarCancelar();
+  });
+
+  document.getElementById('btnAgregarProfesor').addEventListener('click', onAgregarProfesor);
+  document.getElementById('btnAgregarCurso').addEventListener('click', onAgregarCurso);
+  document.getElementById('nuevoProfesorInput').addEventListener('keydown', (ev) => { if(ev.key === 'Enter') onAgregarProfesor(); });
+  document.getElementById('nuevoCursoInput').addEventListener('keydown', (ev) => { if(ev.key === 'Enter') onAgregarCurso(); });
+  document.getElementById('btnCerrarAdminListas').addEventListener('click', cerrarModalAdminListas);
+  document.getElementById('adminListasOverlay').addEventListener('click', (ev) => {
+    if(ev.target.id === 'adminListasOverlay') cerrarModalAdminListas();
   });
 
   setInterval(autoRefresh, 20000);
