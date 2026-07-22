@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reservas · Sala de Computación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2F4EE;
+    --card:#FFFFFF;
+    --ink:#1F2A24;
+    --ink-soft:#5B6B60;
+    --pine:#2F4B3C;
+    --pine-soft:#3F6350;
+    --chalk:#E3A72F;
+    --chalk-soft:#F3D889;
+    --brick:#A6432D;
+    --brick-soft:#F4DFD8;
+    --line:#DCE1D8;
+    --occupied:#D8DCD3;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px;}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--pine-soft);font-weight:600;margin:0 0 6px;
+  }
+  h1{font-family:'Fraunces',serif;font-size:clamp(26px,4vw,36px);font-weight:600;margin:0;color:var(--pine);letter-spacing:-0.01em;}
+  .subtitle{color:var(--ink-soft);font-size:14px;margin-top:6px;max-width:48ch;}
+
+  .datebox{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px 16px;display:flex;flex-direction:column;gap:4px;}
+  .datebox label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:600;}
+  .datebox input{border:none;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--pine);background:transparent;padding:0;outline:none;}
+
+  /* Timeline */
+  .timeline-card{background:var(--pine);border-radius:var(--radius);padding:22px 22px 18px;margin-bottom:26px;color:#EDF3EC;position:relative;overflow:hidden;}
+  .timeline-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
+  .timeline-head h2{font-family:'Fraunces',serif;font-size:16px;font-weight:600;margin:0;color:#F6EFDC;}
+  .timeline-head span{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#B9CFC1;}
+  .ticks{display:flex;position:relative;height:22px;margin-bottom:6px;}
+  .tick{position:absolute;top:0;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#B9CFC1;white-space:nowrap;}
+  .tick::after{content:"";position:absolute;bottom:-6px;left:50%;width:1px;height:6px;background:#4C6B58;}
+  .lane{position:relative;height:32px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:7px;}
+  .lane-label{position:absolute;left:0;top:-15px;font-size:10px;color:#CFE0D3;font-weight:600;letter-spacing:.02em;}
+  .block{position:absolute;top:4px;bottom:4px;background:var(--chalk);border-radius:6px;padding:0 8px;display:flex;align-items:center;font-size:10.5px;font-weight:600;color:#2A2107;overflow:hidden;white-space:nowrap;cursor:default;}
+  .lanes-wrap{margin-top:20px;}
+  .empty-line{font-family:'IBM Plex Mono',monospace;font-size:12px;color:#B9CFC1;padding:6px 0 2px;}
+
+  .grid{display:grid;grid-template-columns:1.15fr 0.85fr;gap:22px;align-items:start;}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr;} }
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;}
+  .card h2{font-family:'Fraunces',serif;font-size:19px;font-weight:600;margin:0 0 4px;color:var(--pine);}
+  .card .hint{color:var(--ink-soft);font-size:13px;margin:0 0 16px;}
+
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+  .field select, .field input[type=text], .field input[type=date]{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+    font-family:'Inter',sans-serif;font-size:14.5px;color:var(--ink);background:#FBFCFA;outline:none;
+  }
+  .field select:focus, .field input:focus{border-color:var(--pine-soft);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  .section-label{font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 8px;}
+
+  /* Grupo de netbooks (chips radio) */
+  .chip-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .chip{
+    border:1px solid var(--line);background:#FBFCFA;border-radius:999px;padding:8px 14px;
+    font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none;
+    transition:background .12s,border-color .12s,color .12s;
+  }
+  .chip:hover{border-color:var(--pine-soft);}
+  .chip.active{background:var(--pine);border-color:var(--pine);color:#fff;}
+  .chip.disabled{opacity:.45;cursor:not-allowed;}
+
+  /* Grilla de asientos */
+  .seat-legend{display:flex;gap:14px;font-size:11.5px;color:var(--ink-soft);margin:10px 0 10px;}
+  .seat-legend span{display:inline-flex;align-items:center;gap:5px;}
+  .swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
+  .swatch.avail{background:#fff;border:1.5px solid var(--pine-soft);}
+  .swatch.sel{background:var(--pine);}
+  .swatch.occ{background:var(--occupied);}
+
+  .seatgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:7px;margin-bottom:6px;}
+  .seat{
+    aspect-ratio:1;border-radius:8px;border:1.5px solid var(--pine-soft);background:#fff;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--pine);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .seat.selected{background:var(--pine);color:#fff;}
+  .seat.occupied{background:var(--occupied);border-color:var(--occupied);color:#9AA69C;cursor:not-allowed;}
+  .seat-hint{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
+
+  .seatgrid-actions{display:flex;gap:8px;margin-bottom:8px;}
+  .mini-btn{
+    border:1px solid var(--pine-soft);background:#fff;color:var(--pine-soft);
+    font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .mini-btn:hover{background:var(--pine-soft);color:#fff;}
+
+  /* aviso de uso prioritario del carrito */
+  .uso-box{border:1px solid var(--chalk-soft);background:#FBF6E7;border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+  .uso-box p{margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+  .uso-box .uso-chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .uso-chip{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;
+    font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none;
+  }
+  .uso-chip.active{background:var(--chalk);border-color:var(--chalk);color:#3B2F0B;}
+  .uso-nudge{margin-top:9px;font-size:12px;color:var(--brick);background:var(--brick-soft);padding:8px 10px;border-radius:8px;display:none;}
+  .uso-nudge.show{display:block;}
+
+  /* Extras chips con + */
+  .extra-chip{
+    border:1px solid var(--line);background:#FBFCFA;border-radius:10px;padding:9px 12px;
+    font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+  }
+  .extra-chip .plus{font-size:15px;color:var(--pine-soft);font-weight:700;}
+  .extra-chip.selected{background:var(--pine);border-color:var(--pine);color:#fff;}
+  .extra-chip.selected .plus{color:#fff;}
+  .extra-chip.disabled{opacity:.45;cursor:not-allowed;}
+  .extra-chip small{font-weight:500;font-size:11px;opacity:.75;display:block;}
+  .extras-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  .avail-hint{margin-top:4px;font-size:12.5px;color:var(--ink-soft);}
+
+  button.submit{width:100%;margin-top:16px;padding:12px 16px;border:none;border-radius:10px;background:var(--pine);color:#fff;font-weight:600;font-size:14.5px;cursor:pointer;font-family:'Inter',sans-serif;}
+  button.submit:hover{background:var(--pine-soft);}
+  button.submit:disabled{background:#B9C4BC;cursor:not-allowed;}
+
+  .msg{margin-top:12px;padding:10px 12px;border-radius:9px;font-size:13.5px;display:none;}
+  .msg.show{display:block;}
+  .msg.success{background:#E7F0E2;color:var(--pine);}
+  .msg.error{background:var(--brick-soft);color:var(--brick);}
+
+  .agenda-item{border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+  .agenda-item .meta{font-size:13.5px;}
+  .agenda-item .meta b{color:var(--pine);}
+  .prof-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .agenda-item .horario{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:3px;}
+  .agenda-item .items{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
+  .agenda-item .tag{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--pine-soft);background:#E7F0E2;padding:2px 7px;border-radius:5px;margin:4px 4px 0 0;}
+  .agenda-item button{border:none;background:none;color:var(--brick);font-size:12px;cursor:pointer;font-weight:600;padding:4px 6px;white-space:nowrap;}
+  .agenda-item button:hover{text-decoration:underline;}
+  .empty-state{text-align:center;color:var(--ink-soft);font-size:13.5px;padding:26px 10px;}
+  .loading{color:var(--ink-soft);font-size:13.5px;padding:14px 0;}
+  footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:34px;}
+
+  /* Modo administrador */
+  .admin-btn{
+    border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 16px;
+    font-size:13px;font-weight:600;color:var(--pine);cursor:pointer;font-family:'Inter',sans-serif;
+    display:flex;align-items:center;gap:6px;
+  }
+  .admin-btn:hover{border-color:var(--pine-soft);}
+  .admin-badge{
+    display:flex;align-items:center;gap:10px;background:#E7F0E2;border:1px solid var(--pine-soft);
+    border-radius:999px;padding:8px 14px;font-size:12.5px;font-weight:600;color:var(--pine);
+  }
+  .admin-badge .dot{width:8px;height:8px;border-radius:50%;background:#3F8F5C;display:inline-block;}
+  .admin-exit-btn{border:none;background:none;color:var(--brick);font-size:12px;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'Inter',sans-serif;padding:0;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(31,42,36,.55);display:none;
+    align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:#fff;border-radius:14px;padding:24px;max-width:340px;width:100%;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+  .modal-box h3{font-family:'Fraunces',serif;font-size:18px;margin:0 0 8px;color:var(--pine);}
+  .modal-box p{font-size:13px;color:var(--ink-soft);margin:0 0 14px;line-height:1.4;}
+  .modal-box input[type=password]{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;
+    font-size:14.5px;margin-bottom:10px;outline:none;font-family:'Inter',sans-serif;box-sizing:border-box;
+  }
+  .modal-box input[type=password]:focus{border-color:var(--pine-soft);}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .modal-actions button{border:none;border-radius:9px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;}
+  .modal-btn-cancel{background:#F1F3EE;color:var(--ink-soft);}
+  .modal-btn-confirm{background:var(--pine);color:#fff;}
+  .modal-btn-confirm:disabled{background:#B9C4BC;cursor:not-allowed;}
+  .modal-btn-danger{background:var(--brick);color:#fff;}
+  .modal-btn-danger:disabled{background:#D9B3A9;cursor:not-allowed;}
+  .modal-msg{margin-top:8px;font-size:12.5px;color:var(--brick);display:none;}
+  .modal-msg.show{display:block;}
+
+  .confirm-details{
+    background:#F7F8F4;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-bottom:16px;font-size:13.5px;
+  }
+  .confirm-details dt{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600;margin-top:8px;}
+  .confirm-details dt:first-child{margin-top:0;}
+  .confirm-details dd{margin:1px 0 0;color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="brand-eyebrow">Sala de Computación</p>
+      <h1>Reservas de equipos</h1>
+      <p class="subtitle">Elegí las netbooks puntuales que vas a usar y sumá proyector, televisor u otro equipo si lo necesitás.</p>
+    </div>
+    <div class="datebox">
+      <label for="dateInput">Día a mostrar</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div id="adminControls"></div>
+  </header>
+
+  <div class="modal-overlay" id="adminModalOverlay">
+    <div class="modal-box">
+      <h3>🔒 Modo administrador</h3>
+      <p>Ingresá la contraseña para poder cancelar reservas.</p>
+      <input type="password" id="adminPasswordInput" placeholder="Contraseña">
+      <div class="modal-msg" id="adminModalMsg">Contraseña incorrecta.</div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn-cancel" id="btnAdminCerrar">Cancelar</button>
+        <button type="button" class="modal-btn-confirm" id="btnAdminConfirmar">Ingresar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="confirmCancelOverlay">
+    <div class="modal-box">
+      <h3>¿Eliminar esta reserva?</h3>
+      <div class="confirm-details" id="confirmCancelDetalle"></div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn-cancel" id="btnConfirmCancelarCerrar">Cancelar</button>
+        <button type="button" class="modal-btn-danger" id="btnConfirmCancelarEliminar">Eliminar reserva</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="timeline-card">
+    <div class="timeline-head">
+      <h2>Agenda del día</h2>
+      <span id="timelineDate"></span>
+    </div>
+    <div class="ticks" id="ticks"></div>
+    <div class="lanes-wrap" id="lanesWrap"></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Nueva reserva</h2>
+      <p class="hint">Se guarda para todos los profesores que usen este sitio.</p>
+
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="fFecha">
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label>Retiro</label>
+          <select id="fRetiro"></select>
+        </div>
+        <div class="field">
+          <label>Devolución</label>
+          <select id="fDevol"></select>
+        </div>
+      </div>
+
+      <div class="section-label">Netbooks a usar</div>
+      <div class="chip-row" id="grupoChips"></div>
+
+      <div id="usoCarritoArea" style="display:none;"></div>
+
+      <div id="seatArea" style="display:none;">
+        <div class="seat-legend">
+          <span><span class="swatch avail"></span>Libre</span>
+          <span><span class="swatch sel"></span>Elegida</span>
+          <span><span class="swatch occ"></span>Ocupada</span>
+        </div>
+        <div class="seatgrid-actions">
+          <button type="button" class="mini-btn" id="btnSelAll">Seleccionar todas</button>
+          <button type="button" class="mini-btn" id="btnSelNone">Deseleccionar todas</button>
+        </div>
+        <div class="seatgrid" id="seatGrid"></div>
+        <div class="seat-hint" id="seatHint"></div>
+      </div>
+
+      <div class="section-label">Sumar equipamiento</div>
+      <div class="extras-grid" id="extrasGrid"></div>
+
+      <div class="row2" style="margin-top:16px;">
+        <div class="field">
+          <label>Nombre del profesor</label>
+          <input type="text" id="fNombre" placeholder="Ej: Ana Pérez">
+        </div>
+        <div class="field">
+          <label>Materia / curso</label>
+          <input type="text" id="fMateria" placeholder="Ej: Informática 3ºB">
+        </div>
+      </div>
+
+      <button class="submit" id="btnReservar">Reservar</button>
+      <div class="msg" id="formMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Reservas del día</h2>
+      <p class="hint" id="agendaCount"></p>
+      <div id="agendaList"><div class="loading">Cargando reservas…</div></div>
+    </div>
+  </div>
+
+  <footer>Datos guardados de forma compartida entre quienes abran este sitio.</footer>
+</div>
+
+<script>
+const SLOTS = ['7:30','8:10','9:00','9:40','10:30','11:10','11:40','12:20'];
+
+// grupos de netbooks: se eligen unidades individuales, tipo mapa de asientos
+const GRUPOS_NETBOOKS = [
+  { id:'carrito_netbooks',  nombre:'Carrito Edutec',    total:30 },
+  { id:'sueltas_netbooks',  nombre:'Netbooks sueltas',  total:14 },
+];
+
+// equipamiento extra: se suma con un chip "+", el sistema asigna la unidad libre
+const EXTRAS = [
+  { id:'proyector',   nombre:'Proyector',        total:2 },
+  { id:'televisor',   nombre:'Televisor',        total:1 },
+  { id:'pc_docente',  nombre:'PC docente',       total:1, detalle:'(la del carrito)' },
+  { id:'pizarra',     nombre:'Pizarra digital',  total:1, detalle:'(la del carrito)' },
+];
+
+const RECURSOS = [...GRUPOS_NETBOOKS, ...EXTRAS]; // para el timeline
+
+function grupoById(id){ return RECURSOS.find(g => g.id === id); }
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtFecha(str){ const [y,m,d] = str.split('-'); return d+'/'+m+'/'+y; }
+function uid(){ return 'r'+Date.now()+Math.random().toString(36).slice(2,8); }
+
+// Genera siempre el mismo color para el mismo nombre (hash simple -> HSL)
+function colorProfesor(nombre){
+  const s = (nombre || '').trim().toLowerCase();
+  let hash = 0;
+  for(let i=0; i<s.length; i++){
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  const hue = hash % 360;
+  const sat = 55 + (hash % 20);        // 55–74%
+  const light = 56 + ((hash >> 8) % 12); // 56–67%
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+}
+
+let reservas = [];
+
+// ---------- conexión con Google Sheets vía Apps Script ----------
+// Pegá acá la URL que te da Apps Script al "Implementar como aplicación web" (termina en /exec)
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxX0mQaRSl_1ddKLwCg1NQYiAceriqDm9mVx9JHjXlM8_SDdOfLbR7o9LfmJU0pLqfm/exec';
+
+// ---------- estado del formulario ----------
+let grupoSeleccionado = null;         // id de GRUPOS_NETBOOKS o null
+let unidadesSeleccionadas = new Set(); // numeros elegidos dentro del grupo activo
+let extrasSeleccionados = new Set();   // ids de EXTRAS marcados
+let usoCarrito = null;                 // 'flexflix' | 'general' | null (solo aplica si grupoSeleccionado === carrito_netbooks)
+
+// ---------- modo administrador ----------
+// La contraseña nunca se guarda en el HTML: solo vive en esta variable mientras
+// dura la sesión (se pierde al recargar la página) y cada acción se revalida en Apps Script.
+let adminMode = false;
+let adminPassword = null;
+
+// Evita que la actualización automática pise una operación en curso (reservar/cancelar)
+let isBusy = false;
+
+function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
+
+async function loadReservas(){
+  if(!scriptConfigurado()){ reservas = []; return; }
+  try{
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
+    const data = await res.json();
+   reservas = (data.reservas || []).map(r => ({
+  ...r,
+  fecha: String(r.fecha).substring(0,10),
+  retiroIdx: Number(r.retiroIdx),
+  devolIdx: Number(r.devolIdx),
+}));
+  }catch(e){ reservas = []; throw e; }
+}
+
+async function crearReservaRemota(reserva){
+  const url = `${APPS_SCRIPT_URL}?action=crear&data=${encodeURIComponent(JSON.stringify(reserva))}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+}
+
+async function cancelarReservaRemota(id, password){
+
+  const url =
+`${APPS_SCRIPT_URL}?action=cancelar&id=${encodeURIComponent(id)}&password=${encodeURIComponent(password)}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(data.error){
+      throw new Error(data.error);
+  }
+}
+
+async function verificarAdminRemoto(password){
+  const url = `${APPS_SCRIPT_URL}?action=verificarAdmin&password=${encodeURIComponent(password)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  return !!data.ok;
+}
+
+/* ---------- modo administrador: UI ---------- */
+function renderAdminControls(){
+  const cont = document.getElementById('adminControls');
+  if(adminMode){
+    cont.innerHTML = `
+      <div class="admin-badge"><span class="dot"></span>Modo administrador activo</div>
+      <button type="button" class="admin-exit-btn" id="btnSalirAdmin">Salir del modo administrador</button>
+    `;
+    document.getElementById('btnSalirAdmin').addEventListener('click', salirModoAdmin);
+  } else {
+    cont.innerHTML = `<div class="admin-btn" id="btnAbrirAdmin">🔒 Modo administrador</div>`;
+    document.getElementById('btnAbrirAdmin').addEventListener('click', abrirModalAdmin);
+  }
+}
+
+function abrirModalAdmin(){
+  document.getElementById('adminModalMsg').classList.remove('show');
+  document.getElementById('adminPasswordInput').value = '';
+  document.getElementById('adminModalOverlay').classList.add('show');
+  document.getElementById('adminPasswordInput').focus();
+}
+function cerrarModalAdmin(){
+  document.getElementById('adminModalOverlay').classList.remove('show');
+}
+function salirModoAdmin(){
+  adminMode = false;
+  adminPassword = null;
+  renderAdminControls();
+  renderAll();
+}
+
+async function onConfirmarAdmin(){
+  const input = document.getElementById('adminPasswordInput');
+  const msg = document.getElementById('adminModalMsg');
+  const password = input.value;
+  const btn = document.getElementById('btnAdminConfirmar');
+
+  if(!password){
+    msg.textContent = 'Escribí la contraseña.';
+    msg.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Verificando…';
+  try{
+    const ok = await verificarAdminRemoto(password);
+    if(ok){
+      adminMode = true;
+      adminPassword = password;
+      cerrarModalAdmin();
+      renderAdminControls();
+      renderAll();
+    } else {
+      msg.textContent = 'Contraseña incorrecta.';
+      msg.classList.add('show');
+    }
+  }catch(e){
+    msg.textContent = 'No se pudo verificar. Revisá la conexión.';
+    msg.classList.add('show');
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Ingresar';
+  }
+}
+function rangesOverlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart < aEnd; }
+
+// unidades ocupadas (Set de numeros) de un grupo/extra, en una fecha y rango horario
+function unidadesOcupadas(fecha, grupoId, retiroIdx, devolIdx){
+  const set = new Set();
+  reservas
+    .filter(r => r.fecha === fecha && rangesOverlap(retiroIdx, devolIdx, r.retiroIdx, r.devolIdx))
+    .forEach(r => r.items.filter(it => it.grupo === grupoId).forEach(it => set.add(it.unidad)));
+  return set;
+}
+
+function primerUnidadLibre(total, ocupadas){
+  for(let n=1; n<=total; n++) if(!ocupadas.has(n)) return n;
+  return null;
+}
+
+function getFormContext(){
+  return {
+    fecha: document.getElementById('fFecha').value,
+    retiroIdx: parseInt(document.getElementById('fRetiro').value,10),
+    devolIdx: parseInt(document.getElementById('fDevol').value,10),
+  };
+}
+
+/* ---------- selects de horario ---------- */
+function fillHorarioSelects(){
+  const fRetiro = document.getElementById('fRetiro');
+  fRetiro.innerHTML = SLOTS.slice(0, SLOTS.length-1).map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  updateDevolOptions();
+}
+function updateDevolOptions(){
+  const retiroIdx = parseInt(document.getElementById('fRetiro').value,10);
+  const fDevol = document.getElementById('fDevol');
+  const prev = fDevol.value;
+  fDevol.innerHTML = SLOTS.map((s,i)=>({s,i})).filter(o=>o.i>retiroIdx)
+    .map(o => `<option value="${o.i}">${o.s}</option>`).join('');
+  if(prev && parseInt(prev,10) > retiroIdx) fDevol.value = prev;
+}
+
+/* ---------- chips de grupo de netbooks ---------- */
+function renderGrupoChips(){
+  const cont = document.getElementById('grupoChips');
+  const ctx = getFormContext();
+  cont.innerHTML = GRUPOS_NETBOOKS.map(g => {
+    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
+    const libres = g.total - ocupadas.size;
+    const activo = grupoSeleccionado === g.id ? 'active' : '';
+    return `<div class="chip ${activo}" data-grupo="${g.id}">${g.nombre} <span style="opacity:.7">(${libres}/${g.total} libres)</span></div>`;
+  }).join('') + `<div class="chip ${grupoSeleccionado===null?'active':''}" data-grupo="">No uso netbooks</div>`;
+
+  cont.querySelectorAll('.chip').forEach(el => {
+    el.addEventListener('click', () => {
+      const g = el.getAttribute('data-grupo');
+      grupoSeleccionado = g === '' ? null : g;
+      unidadesSeleccionadas = new Set();
+      usoCarrito = null;
+      renderGrupoChips();
+      renderUsoCarrito();
+      renderSeatGrid();
+    });
+  });
+}
+
+/* ---------- aviso de uso prioritario del carrito ---------- */
+function renderUsoCarrito(){
+  const area = document.getElementById('usoCarritoArea');
+  if(grupoSeleccionado !== 'carrito_netbooks'){
+    area.style.display = 'none';
+    area.innerHTML = '';
+    return;
+  }
+  area.style.display = 'block';
+  const ctx = getFormContext();
+  const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
+  const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
+  const libresSueltas = sueltas.total - ocupadasSueltas.size;
+
+  const mostrarNudge = usoCarrito === 'general' && libresSueltas > 0;
+
+  area.innerHTML = `
+    <div class="uso-box">
+      <p>El Carrito Edutec es prioritario para clases con <b>Flexflix</b> o <b>Cumbre</b>. Contanos para qué lo vas a usar:</p>
+      <div class="uso-chips">
+        <div class="uso-chip ${usoCarrito==='flexflix'?'active':''}" data-uso="flexflix">Flexflix / Cumbre</div>
+        <div class="uso-chip ${usoCarrito==='general'?'active':''}" data-uso="general">Otro uso general</div>
+      </div>
+      <div class="uso-nudge ${mostrarNudge?'show':''}">
+        Para uso general hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario — dejan el carrito disponible para quien dé Flexflix/Cumbre. Igual podés seguir con el carrito si lo necesitás.
+      </div>
+    </div>`;
+
+  area.querySelectorAll('.uso-chip').forEach(el => {
+    el.addEventListener('click', () => {
+      usoCarrito = el.getAttribute('data-uso');
+      renderUsoCarrito();
+    });
+  });
+}
+
+/* ---------- grilla de asientos ---------- */
+function renderSeatGrid(){
+  const area = document.getElementById('seatArea');
+  const grid = document.getElementById('seatGrid');
+  const hint = document.getElementById('seatHint');
+
+  if(!grupoSeleccionado){
+    area.style.display = 'none';
+    return;
+  }
+  area.style.display = 'block';
+  const g = grupoById(grupoSeleccionado);
+  const ctx = getFormContext();
+  const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
+
+  // sacar de la seleccion cualquier numero que haya quedado ocupado
+  unidadesSeleccionadas.forEach(n => { if(ocupadas.has(n)) unidadesSeleccionadas.delete(n); });
+
+  grid.innerHTML = Array.from({length:g.total}, (_,i)=>i+1).map(n => {
+    const occ = ocupadas.has(n);
+    const sel = unidadesSeleccionadas.has(n);
+    const cls = occ ? 'occupied' : (sel ? 'selected' : '');
+    return `<div class="seat ${cls}" data-n="${n}">${n}</div>`;
+  }).join('');
+
+  grid.querySelectorAll('.seat:not(.occupied)').forEach(el => {
+    el.addEventListener('click', () => {
+      const n = parseInt(el.getAttribute('data-n'),10);
+      if(unidadesSeleccionadas.has(n)) unidadesSeleccionadas.delete(n);
+      else unidadesSeleccionadas.add(n);
+      renderSeatGrid();
+    });
+  });
+
+  hint.textContent = unidadesSeleccionadas.size === 0
+    ? `Tocá los números de ${g.nombre.toLowerCase()} que vas a usar.`
+    : `Elegiste ${unidadesSeleccionadas.size} de ${g.nombre.toLowerCase()}: ${Array.from(unidadesSeleccionadas).sort((a,b)=>a-b).join(', ')}.`;
+
+  document.getElementById('btnSelAll').onclick = () => {
+    for(let n=1; n<=g.total; n++) if(!ocupadas.has(n)) unidadesSeleccionadas.add(n);
+    renderSeatGrid();
+  };
+  document.getElementById('btnSelNone').onclick = () => {
+    unidadesSeleccionadas = new Set();
+    renderSeatGrid();
+  };
+}
+
+/* ---------- chips de extras ---------- */
+function renderExtrasGrid(){
+  const cont = document.getElementById('extrasGrid');
+  const ctx = getFormContext();
+  cont.innerHTML = EXTRAS.map(ex => {
+    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, ex.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
+    const libres = ex.total - ocupadas.size;
+    const selected = extrasSeleccionados.has(ex.id);
+    const disabled = libres <= 0 && !selected;
+    const detalle = ex.detalle ? ` <small>${ex.detalle}</small>` : '';
+    return `<div class="extra-chip ${selected?'selected':''} ${disabled?'disabled':''}" data-extra="${ex.id}">
+      <span>${ex.nombre}${detalle}</span>
+      <span class="plus">${selected ? '✓' : (disabled ? '—' : '+')}</span>
+    </div>`;
+  }).join('');
+
+  cont.querySelectorAll('.extra-chip:not(.disabled)').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.getAttribute('data-extra');
+      if(extrasSeleccionados.has(id)) extrasSeleccionados.delete(id);
+      else extrasSeleccionados.add(id);
+      renderExtrasGrid();
+    });
+  });
+}
+
+/* ---------- envío de reserva ---------- */
+async function onReservar(){
+  const fecha = document.getElementById('fFecha').value;
+  const retiroIdx = parseInt(document.getElementById('fRetiro').value,10);
+  const devolIdx = parseInt(document.getElementById('fDevol').value,10);
+  const nombre = document.getElementById('fNombre').value.trim();
+  const materia = document.getElementById('fMateria').value.trim();
+  const msg = document.getElementById('formMsg');
+  msg.className = 'msg';
+
+  if(!scriptConfigurado()){
+    msg.textContent = 'Falta configurar la conexión con Google Sheets (APPS_SCRIPT_URL) en el código.';
+    msg.className = 'msg show error';
+    return;
+  }
+  if(!fecha || !nombre || !materia){
+    msg.textContent = 'Completá fecha, nombre y materia/curso.';
+    msg.className = 'msg show error';
+    return;
+  }
+  if(unidadesSeleccionadas.size === 0 && extrasSeleccionados.size === 0){
+    msg.textContent = 'Elegí al menos una netbook o un equipo para reservar.';
+    msg.className = 'msg show error';
+    return;
+  }
+
+  const btn = document.getElementById('btnReservar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+  isBusy = true;
+
+  try{
+    await loadReservas(); // releer antes de confirmar, por si alguien reservó en simultáneo
+
+    const conflictos = [];
+    const items = [];
+
+    if(grupoSeleccionado){
+      const g = grupoById(grupoSeleccionado);
+      const ocupadas = unidadesOcupadas(fecha, g.id, retiroIdx, devolIdx);
+      unidadesSeleccionadas.forEach(n => {
+        if(ocupadas.has(n)) conflictos.push(`${g.nombre} #${n}`);
+        else items.push({ grupo: g.id, unidad: n });
+      });
+    }
+
+    EXTRAS.filter(ex => extrasSeleccionados.has(ex.id)).forEach(ex => {
+      const ocupadas = unidadesOcupadas(fecha, ex.id, retiroIdx, devolIdx);
+      const libre = primerUnidadLibre(ex.total, ocupadas);
+      if(libre === null) conflictos.push(ex.nombre);
+      else items.push({ grupo: ex.id, unidad: libre });
+    });
+
+    if(conflictos.length > 0){
+      msg.textContent = `Ya no está disponible: ${conflictos.join(', ')}. Se actualizó la grilla, elegí otra opción.`;
+      msg.className = 'msg show error';
+      renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid();
+    } else {
+      const usoCarritoGuardado = (grupoSeleccionado === 'carrito_netbooks') ? usoCarrito : null;
+      const nuevaReserva = { id: uid(), fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: usoCarritoGuardado, creado: Date.now() };
+      await crearReservaRemota(nuevaReserva);
+      await loadReservas();
+      msg.textContent = 'Reserva confirmada.';
+      msg.className = 'msg show success';
+      document.getElementById('fNombre').value = '';
+      document.getElementById('fMateria').value = '';
+      grupoSeleccionado = null;
+      unidadesSeleccionadas = new Set();
+      extrasSeleccionados = new Set();
+      usoCarrito = null;
+      renderAll();
+    }
+  }catch(e){
+    msg.textContent = 'No se pudo guardar la reserva. Probá de nuevo.';
+    msg.className = 'msg show error';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Reservar';
+    isBusy = false;
+  }
+}
+
+/* ---------- timeline ---------- */
+function renderTicks(){
+  const ticks = document.getElementById('ticks');
+  ticks.innerHTML = SLOTS.map((s,i) => {
+    const pct = (i/(SLOTS.length-1))*100;
+    return `<span class="tick" style="left:${pct}%">${s}</span>`;
+  }).join('');
+}
+function renderLanes(fecha){
+  const wrap = document.getElementById('lanesWrap');
+  const total = SLOTS.length - 1;
+  const delDia = reservas.filter(r => r.fecha === fecha);
+  if(delDia.length === 0){
+    wrap.innerHTML = `<div class="empty-line">Sin reservas para este día todavía.</div>`;
+    return;
+  }
+  wrap.innerHTML = RECURSOS.map(rec => {
+    const filas = delDia.filter(r => r.items.some(it => it.grupo === rec.id));
+    if(filas.length === 0) return '';
+    const blocks = filas.map(r => {
+      const left = (r.retiroIdx/total)*100;
+      const width = ((r.devolIdx - r.retiroIdx)/total)*100;
+      const cant = r.items.filter(it => it.grupo === rec.id).length;
+      const label = cant > 1 ? `${r.nombre} ×${cant}` : r.nombre;
+      const color = colorProfesor(r.nombre);
+      return `<div class="block" style="left:${left}%;width:${width}%;background:${color};" title="${rec.nombre} · ${r.nombre} (${r.materia}) ${SLOTS[r.retiroIdx]}–${SLOTS[r.devolIdx]}">${label}</div>`;
+    }).join('');
+    return `<div class="lane"><span class="lane-label">${rec.nombre}</span>${blocks}</div>`;
+  }).join('');
+}
+
+/* ---------- agenda ---------- */
+let reservaAEliminar = null; // guarda la reserva seleccionada mientras se confirma en el modal
+
+function abrirModalConfirmarCancelar(id){
+  const r = reservas.find(x => x.id === id);
+  if(!r) return;
+  reservaAEliminar = r;
+
+  const equipos = resumenItems(r.items).join(', ') || 'Sin equipos';
+  document.getElementById('confirmCancelDetalle').innerHTML = `
+    <dl style="margin:0;">
+      <dt>Profesor</dt><dd>${r.nombre}</dd>
+      <dt>Materia</dt><dd>${r.materia}</dd>
+      <dt>Fecha</dt><dd>${fmtFecha(r.fecha)}</dd>
+      <dt>Horario</dt><dd>${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</dd>
+      <dt>Equipos reservados</dt><dd>${equipos}</dd>
+    </dl>`;
+  document.getElementById('confirmCancelOverlay').classList.add('show');
+}
+
+function cerrarModalConfirmarCancelar(){
+  document.getElementById('confirmCancelOverlay').classList.remove('show');
+  reservaAEliminar = null;
+}
+
+async function onConfirmarEliminar(){
+  if(!reservaAEliminar) return;
+  const id = reservaAEliminar.id;
+  const btn = document.getElementById('btnConfirmCancelarEliminar');
+  btn.disabled = true;
+  btn.textContent = 'Eliminando…';
+  try{
+    await ejecutarCancelacion(id);
+    cerrarModalConfirmarCancelar();
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Eliminar reserva';
+  }
+}
+
+async function ejecutarCancelacion(id){
+  if(!adminMode || !adminPassword) return;
+
+  isBusy = true;
+  try{
+    await cancelarReservaRemota(id, adminPassword);
+    await loadReservas();
+    renderAll();
+  }catch(e){
+    alert('No se pudo cancelar: ' + e.message);
+    // si la contraseña dejó de ser válida, se sale del modo admin para evitar quedar en un estado inconsistente
+    salirModoAdmin();
+  }finally{
+    isBusy = false;
+  }
+}
+
+function resumenItems(items){
+  const porGrupo = {};
+  items.forEach(it => { (porGrupo[it.grupo] = porGrupo[it.grupo] || []).push(it.unidad); });
+  return Object.entries(porGrupo).map(([grupoId, unidades]) => {
+    const rec = grupoById(grupoId);
+    const esNetbook = GRUPOS_NETBOOKS.some(g => g.id === grupoId);
+    if(esNetbook){
+      return `${rec.nombre}: #${unidades.sort((a,b)=>a-b).join(', #')}`;
+    }
+    return rec.nombre;
+  });
+}
+
+function renderAgenda(fecha){
+  const list = document.getElementById('agendaList');
+  const count = document.getElementById('agendaCount');
+  const delDia = reservas.filter(r => r.fecha === fecha).sort((a,b) => a.retiroIdx - b.retiroIdx);
+
+  count.textContent = delDia.length === 0 ? 'Todavía no hay nada reservado.' : `${delDia.length} reserva${delDia.length>1?'s':''} para el ${fmtFecha(fecha)}.`;
+
+  if(delDia.length === 0){
+    list.innerHTML = `<div class="empty-state">No hay reservas para este día.<br>Usá el formulario para cargar una.</div>`;
+    return;
+  }
+
+  list.innerHTML = delDia.map(r => {
+    const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
+    const usoTag = r.usoCarrito
+      ? `<span class="tag">${r.usoCarrito === 'flexflix' ? 'Flexflix/Cumbre' : 'Uso general'}</span>`
+      : '';
+    const cancelBtn = adminMode ? `<button onclick="abrirModalConfirmarCancelar('${r.id}')">Cancelar</button>` : '';
+    const color = colorProfesor(r.nombre);
+    return `
+      <div class="agenda-item" style="border-left:5px solid ${color};">
+        <div class="meta">
+          <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}
+          <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
+          <div class="items">${tags}${usoTag}</div>
+        </div>
+        ${cancelBtn}
+      </div>`;
+  }).join('');
+}
+
+/* ---------- render general ---------- */
+function renderAll(){
+  const fecha = document.getElementById('dateInput').value || todayStr();
+  document.getElementById('timelineDate').textContent = fmtFecha(fecha);
+  renderLanes(fecha);
+  renderAgenda(fecha);
+  renderGrupoChips();
+  renderUsoCarrito();
+  renderSeatGrid();
+  renderExtrasGrid();
+}
+
+/* ---------- actualización automática ---------- */
+// Refresca agenda, timeline y disponibilidad cada 20s, sin recargar la página
+// ni tocar lo que el usuario ya escribió/eligió en el formulario.
+async function autoRefresh(){
+  if(isBusy || !scriptConfigurado()) return;
+  try{
+    await loadReservas();
+    renderAll();
+  }catch(e){
+    // si falla, se mantienen los últimos datos buenos en pantalla; se reintenta en el próximo ciclo
+  }
+}
+
+async function init(){
+  const hoy = todayStr();
+  document.getElementById('dateInput').value = hoy;
+  document.getElementById('fFecha').value = hoy;
+
+  fillHorarioSelects();
+  renderTicks();
+  renderAdminControls();
+
+  if(!scriptConfigurado()){
+    document.getElementById('agendaList').innerHTML =
+      '<div class="empty-state">Falta pegar la URL de Apps Script en la constante APPS_SCRIPT_URL, dentro del código del sitio.</div>';
+  } else {
+    try{
+      await loadReservas();
+    }catch(e){
+      document.getElementById('agendaList').innerHTML =
+        '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
+    }
+  }
+  renderAll();
+
+  document.getElementById('dateInput').addEventListener('change', renderAll);
+  document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
+  document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
+  document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
+  document.getElementById('btnReservar').addEventListener('click', onReservar);
+  document.getElementById('btnAdminConfirmar').addEventListener('click', onConfirmarAdmin);
+  document.getElementById('btnAdminCerrar').addEventListener('click', cerrarModalAdmin);
+  document.getElementById('adminPasswordInput').addEventListener('keydown', (ev) => {
+    if(ev.key === 'Enter') onConfirmarAdmin();
+  });
+  document.getElementById('adminModalOverlay').addEventListener('click', (ev) => {
+    if(ev.target.id === 'adminModalOverlay') cerrarModalAdmin();
+  });
+
+  document.getElementById('btnConfirmCancelarCerrar').addEventListener('click', cerrarModalConfirmarCancelar);
+  document.getElementById('btnConfirmCancelarEliminar').addEventListener('click', onConfirmarEliminar);
+  document.getElementById('confirmCancelOverlay').addEventListener('click', (ev) => {
+    if(ev.target.id === 'confirmCancelOverlay') cerrarModalConfirmarCancelar();
+  });
+
+  setInterval(autoRefresh, 20000);
+}
+
+init();
+</script>
+</body>
+</html>
