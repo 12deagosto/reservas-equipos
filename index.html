@@ -914,6 +914,14 @@ async function onReservar(){
     msg.className = 'msg show error';
     return;
   }
+  {
+    const { min, max } = limitesFecha();
+    if(fecha < min || fecha > max){
+      msg.textContent = 'Solo se pueden reservar fechas dentro del próximo mes.';
+      msg.className = 'msg show error';
+      return;
+    }
+  }
   if(unidadesSeleccionadas.size === 0 && extrasSeleccionados.size === 0){
     msg.textContent = 'Elegí al menos una netbook o un equipo para reservar.';
     msg.className = 'msg show error';
@@ -1126,9 +1134,7 @@ function renderAll(){
 async function autoRefresh(){
   if(isBusy || !scriptConfigurado()) return;
   try{
-    await loadReservas();
-    await loadProfesores();
-    await loadCursos();
+    await Promise.all([loadReservas(), loadProfesores(), loadCursos()]);
     renderAll();
     renderSelectsFormulario();
   }catch(e){
@@ -1136,10 +1142,25 @@ async function autoRefresh(){
   }
 }
 
+// La agenda solo permite operar entre hoy y un mes hacia adelante
+function limitesFecha(){
+  const hoy = new Date();
+  const limite = new Date(hoy);
+  limite.setMonth(limite.getMonth() + 1);
+  const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return { min: fmt(hoy), max: fmt(limite) };
+}
+
 async function init(){
   const hoy = todayStr();
   document.getElementById('dateInput').value = hoy;
   document.getElementById('fFecha').value = hoy;
+
+  const { min, max } = limitesFecha();
+  document.getElementById('dateInput').min = min;
+  document.getElementById('dateInput').max = max;
+  document.getElementById('fFecha').min = min;
+  document.getElementById('fFecha').max = max;
 
   fillHorarioSelects();
   renderTicks();
@@ -1150,9 +1171,7 @@ async function init(){
       '<div class="empty-state">Falta pegar la URL de Apps Script en la constante APPS_SCRIPT_URL, dentro del código del sitio.</div>';
   } else {
     try{
-      await loadReservas();
-      await loadProfesores();
-      await loadCursos();
+      await Promise.all([loadReservas(), loadProfesores(), loadCursos()]);
     }catch(e){
       document.getElementById('agendaList').innerHTML =
         '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
