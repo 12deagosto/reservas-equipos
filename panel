@@ -217,18 +217,19 @@ function resumenEquiposConCheck(items){
 }
 
 /* ---------- carga de datos (misma acción "list" que ya existe) ---------- */
+let cargoAlgunaVez = false; // true apenas la primera carga funciona correctamente
+
 async function cargarReservas(){
-  try{
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
-    const data = await res.json();
-    reservas = (data.reservas || []).map(r => ({
-      ...r,
-      retiroIdx: Number(r.retiroIdx),
-      devolIdx: Number(r.devolIdx),
-    }));
-  }catch(e){
-    // si falla, se mantienen los últimos datos válidos y se reintenta en el próximo ciclo
-  }
+  const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+ reservas = (data.reservas || []).map(r => ({
+  ...r,
+  fecha: String(r.fecha).substring(0,10),
+  retiroIdx: Number(r.retiroIdx),
+  devolIdx: Number(r.devolIdx),
+}));
+  cargoAlgunaVez = true;
 }
 
 /* ---------- cálculo de la situación actual ---------- */
@@ -380,7 +381,10 @@ function renderReloj(){
   const ahora = new Date();
   const hh = String(ahora.getHours()).padStart(2,'0');
   const mm = String(ahora.getMinutes()).padStart(2,'0');
-  document.getElementById('reloj').textContent = `${hh}:${mm}`;
+  const dd = String(ahora.getDate()).padStart(2,'0');
+  const mo = String(ahora.getMonth()+1).padStart(2,'0');
+  const yy = ahora.getFullYear();
+  document.getElementById('reloj').textContent = `${dd}/${mo}/${yy} — ${hh}:${mm}`;
 }
 
 /* ============================================================
@@ -509,7 +513,20 @@ function procesarNotificaciones(sit){
 
 /* ---------- ciclo principal: actualiza todo cada 30s, sin recargar ---------- */
 async function actualizarTodo(){
-  await cargarReservas();
+  try{
+    await cargarReservas();
+  }catch(e){
+    if(!cargoAlgunaVez){
+      // Nunca se pudo conectar: mostrarlo en vez de confundirlo con "no hay reservas"
+      const inner = document.getElementById('principalContenido');
+      document.getElementById('principal').className = 'principal';
+      inner.className = 'empty-principal';
+      inner.innerHTML = 'No se pudo conectar con la planilla.<br><small style="font-size:14px;">Se reintenta automáticamente cada 30 segundos.</small>';
+    }
+    // Si ya había datos buenos, se dejan en pantalla tal cual y se reintenta en el próximo ciclo
+    return;
+  }
+
   const sit = calcularSituacion();
   ultimaSituacion = sit;
   renderPrincipal(sit);
