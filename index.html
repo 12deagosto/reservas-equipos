@@ -162,6 +162,53 @@
   .loading{color:var(--ink-soft);font-size:13.5px;padding:14px 0;}
   footer{text-align:center;color:var(--ink-soft);font-size:12px;margin-top:34px;}
 
+  /* Encabezado de la tarjeta de agenda (título + imprimir) */
+  .agenda-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;}
+  .agenda-header h2{margin:0;}
+  .filtro-input{
+    width:100%;padding:10px 12px;margin:10px 0 4px;border:1px solid var(--line);border-radius:9px;
+    font-family:'Inter',sans-serif;font-size:14px;color:var(--ink);background:#FBFCFA;outline:none;
+  }
+  .filtro-input:focus{border-color:var(--pine-soft);}
+
+  /* Buscador global (vive sobre la tarjeta del timeline, pero busca en todas las fechas) */
+  .buscador-global{margin:2px 0 0;position:relative;z-index:1;}
+
+  /* Tarjeta de resultados de búsqueda: mismo look que una .card normal */
+  .resultado-busqueda{cursor:pointer;transition:transform .1s;}
+  .resultado-busqueda:hover{transform:translateX(2px);}
+  .resultado-fecha{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:700;
+    color:var(--pine-soft);margin-bottom:4px;
+  }
+
+  /* Resalte temporal al llegar desde un resultado de búsqueda (distinto del "en curso") */
+  .agenda-item.resaltado-temporal{
+    box-shadow:0 0 0 4px var(--chalk-soft), 0 6px 16px rgba(0,0,0,.15);
+    transition:box-shadow .3s;
+  }
+
+  /* Resalte de la reserva en curso (no toca el color por profesor, solo agrega borde/sombra) */
+  .agenda-item.en-curso{
+    border-top:3px solid var(--pine);border-right:3px solid var(--pine);border-bottom:3px solid var(--pine);
+    box-shadow:0 6px 16px rgba(47,75,60,.18);
+  }
+  .badge-en-curso{
+    display:inline-block;background:#2F8F4E;color:#fff;font-size:10.5px;font-weight:700;
+    padding:3px 9px;border-radius:999px;margin-left:8px;vertical-align:middle;
+  }
+
+  /* Impresión: solo título, fecha/contador y la lista de reservas del día */
+  @media print{
+    @page{ size:A4; margin:16mm; }
+    body{background:#fff;}
+    header, .timeline-card, .grid > .card:first-child, #resultadosBusquedaCard, footer, .no-print{ display:none !important; }
+    .grid{display:block;}
+    .wrap{max-width:100%;padding:0;}
+    #agendaCard{border:none;padding:0;}
+    .agenda-item{break-inside:avoid;box-shadow:none;}
+  }
+
   /* Modo administrador */
   .admin-btn{
     border:1px solid var(--line);background:var(--card);border-radius:999px;padding:9px 16px;
@@ -244,7 +291,10 @@
     </div>
     <div class="datebox">
       <label for="dateInput">Día a mostrar</label>
-      <input type="date" id="dateInput">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="date" id="dateInput">
+        <button type="button" class="mini-btn" id="btnHoy">Hoy</button>
+      </div>
     </div>
     <div id="adminControls"></div>
   </header>
@@ -306,8 +356,15 @@
       <h2>Agenda del día</h2>
       <span id="timelineDate"></span>
     </div>
+    <input type="text" id="buscadorGlobal" class="filtro-input buscador-global" placeholder="🔎 Buscar reservas...">
     <div class="ticks" id="ticks"></div>
     <div class="lanes-wrap" id="lanesWrap"></div>
+  </div>
+
+  <div class="card" id="resultadosBusquedaCard" style="display:none;">
+    <h2>Resultados de búsqueda</h2>
+    <div id="resultadosBusqueda"></div>
+    <button type="button" class="mini-btn" id="btnVerMasResultados" style="display:none;margin-top:10px;">Ver más resultados</button>
   </div>
 
   <div class="grid">
@@ -372,8 +429,12 @@
       <div class="msg" id="formMsg"></div>
     </div>
 
-    <div class="card">
-      <h2>Reservas del día</h2>
+    <div class="card" id="agendaCard">
+      <div class="agenda-header">
+        <h2>Reservas del día</h2>
+        <button type="button" class="mini-btn no-print" id="btnImprimir">🖨 Imprimir agenda</button>
+      </div>
+
       <p class="hint" id="agendaCount"></p>
       <div id="agendaList"><div class="loading">Cargando reservas…</div></div>
     </div>
@@ -1085,6 +1146,26 @@ function resumenItems(items){
   });
 }
 
+/* ---------- reserva "en curso" (comparación por horario, no crea objetos Date) ---------- */
+function horaAMinutos(horaStr){
+  const [h, m] = horaStr.split(':').map(Number);
+  return h * 60 + m;
+}
+function estaEnCurso(r){
+  if(r.fecha !== todayStr()) return false;
+  const ahora = new Date();
+  const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
+  return minAhora >= horaAMinutos(SLOTS[r.retiroIdx]) && minAhora < horaAMinutos(SLOTS[r.devolIdx]);
+}
+
+/* ---------- texto normalizado para búsquedas (ignora may/min y acentos) ---------- */
+function quitarAcentos(str){
+  return String(str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function normalizarBusqueda(str){
+  return quitarAcentos(str).toLowerCase();
+}
+
 function renderAgenda(fecha){
   const list = document.getElementById('agendaList');
   const count = document.getElementById('agendaCount');
@@ -1104,16 +1185,112 @@ function renderAgenda(fecha){
       : '';
     const cancelBtn = adminMode ? `<button onclick="abrirModalConfirmarCancelar('${r.id}')">Cancelar</button>` : '';
     const color = colorProfesor(r.nombre);
+    const enCurso = estaEnCurso(r);
+    const badge = enCurso ? `<span class="badge-en-curso">🟢 En curso</span>` : '';
     return `
-      <div class="agenda-item" style="border-left:5px solid ${color};">
+      <div class="agenda-item ${enCurso ? 'en-curso' : ''}" data-reserva-id="${r.id}" style="border-left:5px solid ${color};">
         <div class="meta">
-          <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}
+          <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}${badge}
           <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
           <div class="items">${tags}${usoTag}</div>
         </div>
         ${cancelBtn}
       </div>`;
   }).join('');
+}
+
+/* ============================================================
+   Buscador global de reservas (independiente de renderAgenda):
+   busca en TODAS las reservas guardadas, sin importar la fecha
+   que esté seleccionada en el timeline/agenda.
+   ============================================================ */
+
+// Arma el texto donde se busca cada palabra: profesor, curso, fecha,
+// horario y equipos. Reutiliza resumenItems() para no duplicar esa lógica.
+function crearTextoBusqueda(r){
+  const partes = [
+    r.nombre, r.materia,
+    r.fecha, fmtFecha(r.fecha),
+    SLOTS[r.retiroIdx], SLOTS[r.devolIdx],
+    resumenItems(r.items).join(' '),
+  ];
+  if(r.usoCarrito) partes.push(r.usoCarrito === 'flexflix' ? 'Flexflix Cumbre' : 'Uso general');
+  return normalizarBusqueda(partes.join(' '));
+}
+
+// Devuelve las reservas (de cualquier fecha) que cumplen TODAS las palabras buscadas
+function buscarReservasGlobal(query){
+  const palabras = normalizarBusqueda(query).split(/\s+/).filter(Boolean);
+  if(palabras.length === 0) return [];
+
+  return reservas
+    .filter(r => {
+      const texto = crearTextoBusqueda(r);
+      return palabras.every(p => texto.includes(p));
+    })
+    .sort((a, b) => {
+      if(a.fecha !== b.fecha) return a.fecha < b.fecha ? 1 : -1; // fecha descendente
+      return a.retiroIdx - b.retiroIdx;                          // horario ascendente
+    });
+}
+
+function renderTarjetaResultado(r){
+  const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
+  const usoTag = r.usoCarrito
+    ? `<span class="tag">${r.usoCarrito === 'flexflix' ? 'Flexflix/Cumbre' : 'Uso general'}</span>`
+    : '';
+  const color = colorProfesor(r.nombre);
+  return `
+    <div class="agenda-item resultado-busqueda" style="border-left:5px solid ${color};" onclick="irAReservaEnAgenda('${r.id}','${r.fecha}')">
+      <div class="meta">
+        <div class="resultado-fecha">${fmtFecha(r.fecha)}</div>
+        <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}
+        <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
+        <div class="items">${tags}${usoTag}</div>
+      </div>
+    </div>`;
+}
+
+let resultadosLimite = 20;
+
+// Se muestra únicamente cuando hay texto escrito; con el cuadro vacío, la
+// agenda y el timeline siguen funcionando exactamente igual que antes.
+function renderResultadosBusqueda(query){
+  const card = document.getElementById('resultadosBusquedaCard');
+  const cont = document.getElementById('resultadosBusqueda');
+  const btnVerMas = document.getElementById('btnVerMasResultados');
+  const texto = query.trim();
+
+  if(texto.length === 0){
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  const todos = buscarReservasGlobal(texto);
+  if(todos.length === 0){
+    cont.innerHTML = `<div class="empty-state">No se encontraron reservas.<br>Probá buscar por profesor, curso, fecha o equipo.</div>`;
+    btnVerMas.style.display = 'none';
+    return;
+  }
+
+  const visibles = todos.slice(0, resultadosLimite);
+  cont.innerHTML = visibles.map(renderTarjetaResultado).join('');
+  btnVerMas.style.display = todos.length > resultadosLimite ? 'inline-block' : 'none';
+}
+
+// Al hacer clic en un resultado: cambia la fecha del timeline/agenda,
+// desplaza hasta esa reserva y la resalta unos segundos.
+function irAReservaEnAgenda(id, fecha){
+  document.getElementById('dateInput').value = fecha;
+  renderAll();
+
+  const el = document.querySelector(`.agenda-item[data-reserva-id="${id}"]`);
+  if(el){
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('resaltado-temporal');
+    setTimeout(() => el.classList.remove('resaltado-temporal'), 3000);
+  }
 }
 
 /* ---------- render general ---------- */
@@ -1184,6 +1361,22 @@ async function init(){
   document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
+  document.getElementById('buscadorGlobal').addEventListener('input', (ev) => {
+    resultadosLimite = 20;
+    renderResultadosBusqueda(ev.target.value);
+  });
+  document.getElementById('btnVerMasResultados').addEventListener('click', () => {
+    resultadosLimite += 20;
+    renderResultadosBusqueda(document.getElementById('buscadorGlobal').value);
+  });
+  document.getElementById('btnHoy').addEventListener('click', () => {
+    const hoy = todayStr();
+    document.getElementById('dateInput').value = hoy;
+    document.getElementById('fFecha').value = hoy;
+    renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid();
+    renderAll();
+  });
+  document.getElementById('btnImprimir').addEventListener('click', () => window.print());
   document.getElementById('btnReservar').addEventListener('click', onReservar);
   document.getElementById('btnAdminConfirmar').addEventListener('click', onConfirmarAdmin);
   document.getElementById('btnAdminCerrar').addEventListener('click', cerrarModalAdmin);
