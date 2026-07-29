@@ -113,15 +113,12 @@
   }
   .mini-btn:hover{background:var(--pine-soft);color:#fff;}
 
-  /* aviso de uso prioritario del carrito */
-  .uso-box{border:1px solid var(--chalk-soft);background:#FBF6E7;border-radius:10px;padding:12px 14px;margin-bottom:14px;}
-  .uso-box p{margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
-  .uso-box .uso-chips{display:flex;gap:8px;flex-wrap:wrap;}
-  .uso-chip{
-    border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;
-    font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;user-select:none;
-  }
-  .uso-chip.active{background:var(--chalk);border-color:var(--chalk);color:#3B2F0B;}
+  /* selección de plataforma educativa (radio buttons) */
+  .plataforma-box{border:1px solid var(--chalk-soft);background:#FBF6E7;border-radius:10px;padding:12px 14px;margin-bottom:14px;}
+  .plataforma-box p{margin:0 0 8px;font-size:12.5px;color:var(--ink-soft);line-height:1.45;}
+  .plataforma-opciones{display:flex;flex-direction:column;gap:7px;}
+  .radio-opcion{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--ink);cursor:pointer;user-select:none;}
+  .radio-opcion input{width:16px;height:16px;accent-color:var(--pine);cursor:pointer;}
   .uso-nudge{margin-top:9px;font-size:12px;color:var(--brick);background:var(--brick-soft);padding:8px 10px;border-radius:8px;display:none;}
   .uso-nudge.show{display:block;}
 
@@ -391,7 +388,7 @@
       <div class="section-label">Netbooks a usar</div>
       <div class="chip-row" id="grupoChips"></div>
 
-      <div id="usoCarritoArea" style="display:none;"></div>
+      <div id="plataformaArea" style="display:none;"></div>
 
       <div id="seatArea" style="display:none;">
         <div class="seat-legend">
@@ -493,7 +490,35 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxX0mQaRSl_1ddK
 let grupoSeleccionado = null;         // id de GRUPOS_NETBOOKS o null
 let unidadesSeleccionadas = new Set(); // numeros elegidos dentro del grupo activo
 let extrasSeleccionados = new Set();   // ids de EXTRAS marcados
-let usoCarrito = null;                 // 'flexflix' | 'general' | null (solo aplica si grupoSeleccionado === carrito_netbooks)
+let plataformaSeleccionada = null;     // valor de OPCIONES_PLATAFORMA (obligatorio si se usa carrito o sueltas)
+
+// Opciones de la sección "¿Para qué utilizarás...?" (radio buttons, selección única y obligatoria)
+const OPCIONES_PLATAFORMA = [
+  { valor: 'cumbre', etiqueta: 'Cumbre' },
+  { valor: 'flexflix', etiqueta: 'Flexflix' },
+  { valor: 'matific', etiqueta: 'Matific' },
+  { valor: 'eduten', etiqueta: 'Eduten' },
+  { valor: 'aulas_edutec', etiqueta: 'Aulas Edutec' },
+  { valor: 'otro', etiqueta: 'Otro uso' },
+];
+
+// El backend (Apps Script) sigue leyendo/escribiendo este dato bajo el nombre de
+// campo "usoCarrito" (no se modifica el Apps Script), pero acá se lo trata como
+// un dato general de "plataforma" y esta tabla traduce cualquier valor -- nuevo
+// o guardado por versiones anteriores ('flexflix' / 'general') -- a su etiqueta.
+const ETIQUETAS_PLATAFORMA = {
+  cumbre: 'CUMBRE',
+  flexflix: 'FLEXFLIX',
+  matific: 'MATIFIC',
+  eduten: 'EDUTEN',
+  aulas_edutec: 'AULAS EDUTEC',
+  otro: 'OTRO USO',
+  general: 'USO GENERAL', // valor legado de versiones anteriores
+};
+function etiquetaPlataforma(valor){
+  if(!valor) return null;
+  return ETIQUETAS_PLATAFORMA[valor] || String(valor).toUpperCase();
+}
 
 // ---------- modo administrador ----------
 // La contraseña nunca se guarda en el HTML: solo vive en esta variable mientras
@@ -837,46 +862,58 @@ function renderGrupoChips(){
       const g = el.getAttribute('data-grupo');
       grupoSeleccionado = g === '' ? null : g;
       unidadesSeleccionadas = new Set();
-      usoCarrito = null;
+      plataformaSeleccionada = null;
       renderGrupoChips();
-      renderUsoCarrito();
+      renderSeccionPlataforma();
       renderSeatGrid();
     });
   });
 }
 
-/* ---------- aviso de uso prioritario del carrito ---------- */
-function renderUsoCarrito(){
-  const area = document.getElementById('usoCarritoArea');
-  if(grupoSeleccionado !== 'carrito_netbooks'){
+/* ---------- sección "¿Para qué utilizarás...?" (carrito o netbooks sueltas) ---------- */
+function renderSeccionPlataforma(){
+  const area = document.getElementById('plataformaArea');
+  const esCarrito = grupoSeleccionado === 'carrito_netbooks';
+  const esSueltas = grupoSeleccionado === 'sueltas_netbooks';
+
+  if(!esCarrito && !esSueltas){
     area.style.display = 'none';
     area.innerHTML = '';
     return;
   }
   area.style.display = 'block';
-  const ctx = getFormContext();
-  const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
-  const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
-  const libresSueltas = sueltas.total - ocupadasSueltas.size;
 
-  const mostrarNudge = usoCarrito === 'general' && libresSueltas > 0;
+  const titulo = esCarrito ? '¿Para qué utilizarás el Carrito Edutec?' : '¿Para qué utilizarás las netbooks?';
+
+  let nudgeHtml = '';
+  if(esCarrito && plataformaSeleccionada === 'otro'){
+    const ctx = getFormContext();
+    const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
+    const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx) : new Set();
+    const libresSueltas = sueltas.total - ocupadasSueltas.size;
+    if(libresSueltas > 0){
+      nudgeHtml = `<div class="uso-nudge show">Para otros usos hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario — dejan el carrito disponible para clases con plataformas educativas. Igual podés seguir con el carrito si lo necesitás.</div>`;
+    }
+  }
+
+  const radiosHtml = OPCIONES_PLATAFORMA.map(op => `
+    <label class="radio-opcion">
+      <input type="radio" name="plataforma" value="${op.valor}" ${plataformaSeleccionada === op.valor ? 'checked' : ''}>
+      ${op.etiqueta}
+    </label>`).join('');
 
   area.innerHTML = `
-    <div class="uso-box">
-      <p>El Carrito Edutec es prioritario para clases con <b>Flexflix</b> o <b>Cumbre</b>. Contanos para qué lo vas a usar:</p>
-      <div class="uso-chips">
-        <div class="uso-chip ${usoCarrito==='flexflix'?'active':''}" data-uso="flexflix">Flexflix / Cumbre</div>
-        <div class="uso-chip ${usoCarrito==='general'?'active':''}" data-uso="general">Otro uso general</div>
-      </div>
-      <div class="uso-nudge ${mostrarNudge?'show':''}">
-        Para uso general hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario — dejan el carrito disponible para quien dé Flexflix/Cumbre. Igual podés seguir con el carrito si lo necesitás.
-      </div>
+    <div class="section-label">${titulo}</div>
+    <div class="plataforma-box">
+      ${esCarrito ? '<p>El Carrito Edutec es prioritario para clases que utilizan plataformas educativas.</p>' : ''}
+      <div class="plataforma-opciones">${radiosHtml}</div>
+      ${nudgeHtml}
     </div>`;
 
-  area.querySelectorAll('.uso-chip').forEach(el => {
-    el.addEventListener('click', () => {
-      usoCarrito = el.getAttribute('data-uso');
-      renderUsoCarrito();
+  area.querySelectorAll('input[name="plataforma"]').forEach(input => {
+    input.addEventListener('change', () => {
+      plataformaSeleccionada = input.value;
+      renderSeccionPlataforma();
     });
   });
 }
@@ -988,6 +1025,11 @@ async function onReservar(){
     msg.className = 'msg show error';
     return;
   }
+  if((grupoSeleccionado === 'carrito_netbooks' || grupoSeleccionado === 'sueltas_netbooks') && unidadesSeleccionadas.size > 0 && !plataformaSeleccionada){
+    msg.textContent = `Elegí para qué vas a usar ${grupoSeleccionado === 'carrito_netbooks' ? 'el Carrito Edutec' : 'las netbooks'}.`;
+    msg.className = 'msg show error';
+    return;
+  }
 
   const btn = document.getElementById('btnReservar');
   btn.disabled = true;
@@ -1019,10 +1061,15 @@ async function onReservar(){
     if(conflictos.length > 0){
       msg.textContent = `Ya no está disponible: ${conflictos.join(', ')}. Se actualizó la grilla, elegí otra opción.`;
       msg.className = 'msg show error';
-      renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid();
+      renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
     } else {
-      const usoCarritoGuardado = (grupoSeleccionado === 'carrito_netbooks') ? usoCarrito : null;
-      const nuevaReserva = { id: uid(), fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: usoCarritoGuardado, creado: Date.now() };
+      const plataformaElegida = (grupoSeleccionado === 'carrito_netbooks' || grupoSeleccionado === 'sueltas_netbooks')
+        ? plataformaSeleccionada
+        : null;
+      // Nota de compatibilidad: Apps Script no se modifica, así que el valor de
+      // "plataforma" se sigue enviando y guardando bajo el nombre de campo
+      // usoCarrito (es el mismo dato, solo cambia cómo se lo trata en el frontend).
+      const nuevaReserva = { id: uid(), fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: plataformaElegida, creado: Date.now() };
       await crearReservaRemota(nuevaReserva);
       await loadReservas();
       msg.textContent = 'Reserva confirmada.';
@@ -1032,7 +1079,7 @@ async function onReservar(){
       grupoSeleccionado = null;
       unidadesSeleccionadas = new Set();
       extrasSeleccionados = new Set();
-      usoCarrito = null;
+      plataformaSeleccionada = null;
       renderAll();
     }
   }catch(e){
@@ -1180,9 +1227,8 @@ function renderAgenda(fecha){
 
   list.innerHTML = delDia.map(r => {
     const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
-    const usoTag = r.usoCarrito
-      ? `<span class="tag">${r.usoCarrito === 'flexflix' ? 'Flexflix/Cumbre' : 'Uso general'}</span>`
-      : '';
+    const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
+    const usoTag = etiquetaUso ? `<span class="tag">${etiquetaUso}</span>` : '';
     const cancelBtn = adminMode ? `<button onclick="abrirModalConfirmarCancelar('${r.id}')">Cancelar</button>` : '';
     const color = colorProfesor(r.nombre);
     const enCurso = estaEnCurso(r);
@@ -1214,7 +1260,8 @@ function crearTextoBusqueda(r){
     SLOTS[r.retiroIdx], SLOTS[r.devolIdx],
     resumenItems(r.items).join(' '),
   ];
-  if(r.usoCarrito) partes.push(r.usoCarrito === 'flexflix' ? 'Flexflix Cumbre' : 'Uso general');
+  const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
+  if(etiquetaUso) partes.push(etiquetaUso);
   return normalizarBusqueda(partes.join(' '));
 }
 
@@ -1236,9 +1283,8 @@ function buscarReservasGlobal(query){
 
 function renderTarjetaResultado(r){
   const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
-  const usoTag = r.usoCarrito
-    ? `<span class="tag">${r.usoCarrito === 'flexflix' ? 'Flexflix/Cumbre' : 'Uso general'}</span>`
-    : '';
+  const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
+  const usoTag = etiquetaUso ? `<span class="tag">${etiquetaUso}</span>` : '';
   const color = colorProfesor(r.nombre);
   return `
     <div class="agenda-item resultado-busqueda" style="border-left:5px solid ${color};" onclick="irAReservaEnAgenda('${r.id}','${r.fecha}')">
@@ -1293,6 +1339,48 @@ function irAReservaEnAgenda(id, fecha){
   }
 }
 
+/* ============================================================
+   ESTADÍSTICAS (preparado para el futuro)
+   Todavía no hay ninguna pantalla que las use: son utilidades
+   reutilizables que toman un arreglo de reservas y devuelven
+   conteos, para que armar un informe más adelante sea solo
+   llamarlas y volcar el resultado en una tabla o gráfico.
+   ============================================================ */
+function contarPorClave(reservasArr, obtenerClave){
+  const conteo = {};
+  reservasArr.forEach(r => {
+    const clave = obtenerClave(r);
+    if(clave === null || clave === undefined || clave === '') return;
+    conteo[clave] = (conteo[clave] || 0) + 1;
+  });
+  return conteo;
+}
+function estadisticaPorPlataforma(reservasArr = reservas){
+  return contarPorClave(reservasArr, r => etiquetaPlataforma(r.usoCarrito));
+}
+function estadisticaPorProfesor(reservasArr = reservas){
+  return contarPorClave(reservasArr, r => r.nombre);
+}
+function estadisticaPorCurso(reservasArr = reservas){
+  return contarPorClave(reservasArr, r => r.materia);
+}
+function estadisticaPorMes(reservasArr = reservas){
+  return contarPorClave(reservasArr, r => r.fecha ? r.fecha.slice(0, 7) : null); // 'YYYY-MM'
+}
+function estadisticaCarritoVsSueltas(reservasArr = reservas){
+  const conteo = { carrito: 0, sueltas: 0 };
+  reservasArr.forEach(r => r.items.forEach(it => {
+    if(it.grupo === 'carrito_netbooks') conteo.carrito++;
+    if(it.grupo === 'sueltas_netbooks') conteo.sueltas++;
+  }));
+  return conteo;
+}
+function rankingPlataformas(reservasArr = reservas){
+  return Object.entries(estadisticaPorPlataforma(reservasArr))
+    .sort((a, b) => b[1] - a[1])
+    .map(([plataforma, cantidad]) => ({ plataforma, cantidad }));
+}
+
 /* ---------- render general ---------- */
 function renderAll(){
   const fecha = document.getElementById('dateInput').value || todayStr();
@@ -1300,7 +1388,7 @@ function renderAll(){
   renderLanes(fecha);
   renderAgenda(fecha);
   renderGrupoChips();
-  renderUsoCarrito();
+  renderSeccionPlataforma();
   renderSeatGrid();
   renderExtrasGrid();
 }
@@ -1358,9 +1446,9 @@ async function init(){
   renderSelectsFormulario();
 
   document.getElementById('dateInput').addEventListener('change', renderAll);
-  document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
-  document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
-  document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid(); });
+  document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
+  document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
+  document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('buscadorGlobal').addEventListener('input', (ev) => {
     resultadosLimite = 20;
     renderResultadosBusqueda(ev.target.value);
@@ -1373,7 +1461,7 @@ async function init(){
     const hoy = todayStr();
     document.getElementById('dateInput').value = hoy;
     document.getElementById('fFecha').value = hoy;
-    renderGrupoChips(); renderUsoCarrito(); renderSeatGrid(); renderExtrasGrid();
+    renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
     renderAll();
   });
   document.getElementById('btnImprimir').addEventListener('click', () => window.print());
