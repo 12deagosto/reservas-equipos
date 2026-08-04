@@ -863,6 +863,7 @@ function salirModoAdmin(){
   adminMode = false;
   adminPassword = null;
   if(modoEdicion) salirModoEdicion();
+  actualizarLimitesFecha();
   renderAdminControls();
   renderAll();
 }
@@ -887,6 +888,7 @@ async function onConfirmarAdmin(){
       adminMode = true;
       adminPassword = password;
       cerrarModalAdmin();
+      actualizarLimitesFecha();
       renderAdminControls();
       renderAll();
     } else {
@@ -1112,7 +1114,7 @@ async function onReservar(){
     msg.className = 'msg show error';
     return;
   }
-  {
+  if(!adminMode){
     const { min, max } = limitesFecha();
     if(fecha < min || fecha > max){
       msg.textContent = 'Solo se pueden reservar fechas dentro del próximo mes.';
@@ -1729,7 +1731,8 @@ async function autoRefresh(){
   }
 }
 
-// La agenda solo permite operar entre hoy y un mes hacia adelante
+// La agenda solo permite operar entre hoy y un mes hacia adelante — salvo en
+// Modo Administrador, que puede acceder a cualquier fecha pasada o futura.
 function limitesFecha(){
   const hoy = new Date();
   const limite = new Date(hoy);
@@ -1738,16 +1741,31 @@ function limitesFecha(){
   return { min: fmt(hoy), max: fmt(limite) };
 }
 
+// Aplica (o quita) el min/max de los selectores de fecha según el modo actual.
+// Se llama al iniciar y cada vez que se entra/sale del Modo Administrador.
+function actualizarLimitesFecha(){
+  const dateInput = document.getElementById('dateInput');
+  const fFecha = document.getElementById('fFecha');
+  if(adminMode){
+    dateInput.removeAttribute('min');
+    dateInput.removeAttribute('max');
+    fFecha.removeAttribute('min');
+    fFecha.removeAttribute('max');
+  } else {
+    const { min, max } = limitesFecha();
+    dateInput.min = min;
+    dateInput.max = max;
+    fFecha.min = min;
+    fFecha.max = max;
+  }
+}
+
 async function init(){
   const hoy = todayStr();
   document.getElementById('dateInput').value = hoy;
   document.getElementById('fFecha').value = hoy;
 
-  const { min, max } = limitesFecha();
-  document.getElementById('dateInput').min = min;
-  document.getElementById('dateInput').max = max;
-  document.getElementById('fFecha').min = min;
-  document.getElementById('fFecha').max = max;
+  actualizarLimitesFecha();
 
   fillHorarioSelects();
   renderTicks();
