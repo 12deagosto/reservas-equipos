@@ -304,6 +304,8 @@
   .admin-list-row .btn-del{color:var(--brick);}
   .admin-list-row .btn-save{color:var(--pine);}
   .admin-list-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
+
+.card,.datebox{box-shadow:0 4px 18px rgba(31,42,36,.05)}.timeline-card{box-shadow:0 8px 24px rgba(47,75,60,.14)}button.submit{box-shadow:0 5px 12px rgba(47,75,60,.14);transition:.12s}button.submit:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(47,75,60,.18)}.loading{display:flex;align-items:center;gap:9px}.loading:before{content:"";width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--pine-soft);border-radius:50%;animation:giro .7s linear infinite}@keyframes giro{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -600,8 +602,10 @@ function etiquetaPlataforma(valor){
 // ---------- modo administrador ----------
 // La contraseña nunca se guarda en el HTML: solo vive en esta variable mientras
 // dura la sesión (se pierde al recargar la página) y cada acción se revalida en Apps Script.
-let adminMode = false;
-let adminPassword = null;
+let adminMode=false; let adminPassword=null;
+function restaurarSesionAdmin(){try{const p=localStorage.getItem('reservasAdminPassword');if(p){adminPassword=p;adminMode=true;}}catch(e){}}
+function guardarSesionAdmin(p){try{localStorage.setItem('reservasAdminPassword',p);}catch(e){}}
+function borrarSesionAdmin(){try{localStorage.removeItem('reservasAdminPassword');}catch(e){}}
 
 // Evita que la actualización automática pise una operación en curso (reservar/cancelar)
 let isBusy = false;
@@ -614,19 +618,12 @@ let editandoCursoId = null;
 
 function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
 
-async function loadReservas(){
-  if(!scriptConfigurado()){ reservas = []; return; }
-  try{
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
-    const data = await res.json();
-   reservas = (data.reservas || []).map(r => ({
-  ...r,
-  fecha: String(r.fecha).substring(0,10),
-  retiroIdx: Number(r.retiroIdx),
-  devolIdx: Number(r.devolIdx),
-}));
-  }catch(e){ reservas = []; throw e; }
+async function loadReservas(fecha){
+  if(!scriptConfigurado()){reservas=[];return;}
+  const dia=fecha||document.getElementById('dateInput')?.value||todayStr();
+  try{const res=await fetch(`${APPS_SCRIPT_URL}?action=list&fecha=${encodeURIComponent(dia)}`,{cache:'no-store'});const data=await res.json();if(data.error)throw new Error(data.error);reservas=(data.reservas||[]).map(r=>({...r,fecha:String(r.fecha).substring(0,10),retiroIdx:Number(r.retiroIdx),devolIdx:Number(r.devolIdx)}));}catch(e){reservas=[];throw e;}
 }
+async function buscarReservasRemoto(query){const res=await fetch(`${APPS_SCRIPT_URL}?action=buscar&q=${encodeURIComponent(query)}`,{cache:'no-store'});const data=await res.json();if(data.error)throw new Error(data.error);return data.reservas||[];}
 
 async function crearReservaRemota(reserva){
   const url = `${APPS_SCRIPT_URL}?action=crear&data=${encodeURIComponent(JSON.stringify(reserva))}`;
@@ -862,6 +859,7 @@ function cerrarModalAdmin(){
 function salirModoAdmin(){
   adminMode = false;
   adminPassword = null;
+  borrarSesionAdmin();
   if(modoEdicion) salirModoEdicion();
   actualizarLimitesFecha();
   renderAdminControls();
@@ -887,6 +885,7 @@ async function onConfirmarAdmin(){
     if(ok){
       adminMode = true;
       adminPassword = password;
+      guardarSesionAdmin(password);
       cerrarModalAdmin();
       actualizarLimitesFecha();
       renderAdminControls();
@@ -1139,7 +1138,7 @@ async function onReservar(){
   isBusy = true;
 
   try{
-    await loadReservas(); // releer antes de confirmar, por si alguien reservó en simultáneo
+    await loadReservas(document.getElementById('dateInput').value||todayStr()); // releer antes de confirmar, por si alguien reservó en simultáneo
 
     const conflictos = [];
     const items = [];
@@ -1180,7 +1179,7 @@ async function onReservar(){
       } else {
         const nuevaReserva = { id: uid(), fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: plataformaElegida, creado: Date.now() };
         await crearReservaRemota(nuevaReserva);
-        await loadReservas();
+        await loadReservas(document.getElementById('dateInput').value||todayStr());
         msg.textContent = 'Reserva confirmada.';
         msg.className = 'msg show success';
         document.getElementById('fNombre').value = '';
@@ -1280,7 +1279,7 @@ async function ejecutarCancelacion(id){
   isBusy = true;
   try{
     await cancelarReservaRemota(id, adminPassword);
-    await loadReservas();
+    await loadReservas(document.getElementById('dateInput').value||todayStr());
     renderAll();
   }catch(e){
     alert('No se pudo cancelar: ' + e.message);
@@ -1370,7 +1369,7 @@ function salirModoEdicion(){
 // Envía al backend los datos ya validados de una reserva en edición (mismo id, no crea una nueva)
 async function actualizarReserva(reservaActualizada){
   await editarReservaRemota(reservaActualizada, adminPassword);
-  await loadReservas();
+  await loadReservas(document.getElementById('dateInput').value||todayStr());
 }
 
 /* ---------- estados: entregar / devolver / no retirada ---------- */
@@ -1390,7 +1389,7 @@ async function cambiarEstadoReserva(id, nuevoEstado, evento){
   isBusy = true;
   try{
     await cambiarEstadoReservaRemoto(id, nuevoEstado, evento, adminPassword);
-    await loadReservas();
+    await loadReservas(document.getElementById('dateInput').value||todayStr());
     renderAll();
   }catch(e){
     alert('No se pudo actualizar el estado: ' + e.message);
@@ -1549,20 +1548,7 @@ function crearTextoBusqueda(r){
 }
 
 // Devuelve las reservas (de cualquier fecha) que cumplen TODAS las palabras buscadas
-function buscarReservasGlobal(query){
-  const palabras = normalizarBusqueda(query).split(/\s+/).filter(Boolean);
-  if(palabras.length === 0) return [];
-
-  return reservas
-    .filter(r => {
-      const texto = crearTextoBusqueda(r);
-      return palabras.every(p => texto.includes(p));
-    })
-    .sort((a, b) => {
-      if(a.fecha !== b.fecha) return a.fecha < b.fecha ? 1 : -1; // fecha descendente
-      return a.retiroIdx - b.retiroIdx;                          // horario ascendente
-    });
-}
+async function buscarReservasGlobal(query){if(!query.trim())return [];return await buscarReservasRemoto(query.trim());}
 
 function renderTarjetaResultado(r){
   const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
@@ -1584,7 +1570,7 @@ let resultadosLimite = 20;
 
 // Se muestra únicamente cuando hay texto escrito; con el cuadro vacío, la
 // agenda y el timeline siguen funcionando exactamente igual que antes.
-function renderResultadosBusqueda(query){
+async function renderResultadosBusqueda(query){
   const card = document.getElementById('resultadosBusquedaCard');
   const cont = document.getElementById('resultadosBusqueda');
   const btnVerMas = document.getElementById('btnVerMasResultados');
@@ -1596,7 +1582,7 @@ function renderResultadosBusqueda(query){
   }
   card.style.display = 'block';
 
-  const todos = buscarReservasGlobal(texto);
+  const todos = await buscarReservasGlobal(texto);
   if(todos.length === 0){
     cont.innerHTML = `<div class="empty-state">No se encontraron reservas.<br>Probá buscar por profesor, curso, fecha o equipo.</div>`;
     btnVerMas.style.display = 'none';
@@ -1723,9 +1709,8 @@ function renderAll(){
 async function autoRefresh(){
   if(isBusy || !scriptConfigurado()) return;
   try{
-    await Promise.all([loadReservas(), loadProfesores(), loadCursos()]);
+    await loadReservas(document.getElementById('dateInput').value||todayStr());
     renderAll();
-    renderSelectsFormulario();
   }catch(e){
     // si falla, se mantienen los últimos datos buenos en pantalla; se reintenta en el próximo ciclo
   }
@@ -1761,6 +1746,8 @@ function actualizarLimitesFecha(){
 }
 
 async function init(){
+  restaurarSesionAdmin();
+
   const hoy = todayStr();
   document.getElementById('dateInput').value = hoy;
   document.getElementById('fFecha').value = hoy;
@@ -1785,7 +1772,7 @@ async function init(){
   renderAll();
   renderSelectsFormulario();
 
-  document.getElementById('dateInput').addEventListener('change', renderAll);
+  document.getElementById('dateInput').addEventListener('change',async()=>{const fecha=document.getElementById('dateInput').value||todayStr();document.getElementById('agendaList').innerHTML='<div class="loading">Cargando reservas del día…</div>';try{await loadReservas(fecha);renderAll();}catch(e){document.getElementById('agendaList').innerHTML='<div class="empty-state">No se pudieron cargar las reservas de este día.</div>';}});
   document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
@@ -1836,7 +1823,7 @@ async function init(){
     if(ev.target.id === 'historialOverlay') cerrarModalHistorial();
   });
 
-  setInterval(autoRefresh, 20000);
+  setInterval(autoRefresh, 30000);
 }
 
 init();
