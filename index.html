@@ -95,7 +95,14 @@
   .swatch.sel{background:var(--pine);}
   .swatch.occ{background:var(--occupied);}
 
+  /* El contenedor general no distribuye los grupos en columnas.
+     Cada grupo mantiene su propia grilla horizontal de computadoras. */
+  #seatGrid{display:block;}
   .seatgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:7px;margin-bottom:6px;}
+  .seat-group-block{padding:10px 0 4px;}
+  .seat-group-block + .seat-group-block{border-top:1px solid var(--chalk-soft);margin-top:8px;padding-top:14px;}
+  .seat-group-title{font-weight:700;color:var(--pine);font-size:13px;margin-bottom:7px;}
+  .seat-group-hint{font-size:12px;color:var(--ink-soft);margin:2px 0 8px;}
   .seat{
     aspect-ratio:1;border-radius:8px;border:1.5px solid var(--pine-soft);background:#fff;
     font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--pine);
@@ -222,6 +229,62 @@
   .badge-en-curso{
     display:inline-block;background:#2F8F4E;color:#fff;font-size:10.5px;font-weight:700;
     padding:3px 9px;border-radius:999px;margin-left:8px;vertical-align:middle;
+  }
+
+
+  /* ---------- Informes ---------- */
+  .modal-overlay.informe-overlay{align-items:flex-start;overflow-y:auto;padding:28px 18px;}
+  .informe-box{max-width:1040px;width:100%;margin:auto;padding:26px;}
+  .informe-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;}
+  .informe-head h3{font-size:23px;margin:0 0 4px;}
+  .informe-head p{margin:0;color:var(--ink-soft);font-size:12.5px;}
+  .informe-cerrar{border:1px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:999px;padding:7px 11px;cursor:pointer;font-weight:600;}
+  .informe-filtros{background:#F7F8F4;border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:18px;}
+  .informe-filtros-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;}
+  .informe-filtros label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:700;margin-bottom:4px;}
+  .informe-filtros input,.informe-filtros select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font-family:'Inter',sans-serif;font-size:13px;color:var(--ink);outline:none;}
+  .informe-filtros input:focus,.informe-filtros select:focus{border-color:var(--pine-soft);}
+  .informe-filtros-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .informe-btn{border:none;border-radius:9px;padding:9px 13px;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .informe-btn.primary{background:var(--pine);color:#fff;}
+  .informe-btn.secondary{background:#fff;color:var(--pine-soft);border:1px solid var(--line);}
+  .informe-btn:disabled{opacity:.55;cursor:not-allowed;}
+  .informe-resumen{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:18px;}
+  .informe-kpi{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;}
+  .informe-kpi .num{font-family:'Fraunces',serif;font-size:25px;font-weight:600;color:var(--pine);line-height:1;}
+  .informe-kpi .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);font-weight:700;margin-top:5px;}
+  .informe-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .informe-section{border:1px solid var(--line);border-radius:12px;padding:15px;background:#fff;margin-bottom:14px;min-width:0;}
+  .informe-section.full{grid-column:1/-1;}
+  .informe-section h4{font-family:'Fraunces',serif;font-size:17px;color:var(--pine);margin:0 0 10px;}
+  .informe-section .sub{font-size:11.5px;color:var(--ink-soft);margin:-5px 0 10px;}
+  .informe-table-wrap{overflow:auto;max-height:330px;border:1px solid var(--line);border-radius:9px;}
+  .informe-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .informe-table th{position:sticky;top:0;background:#F7F8F4;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;font-size:10px;text-align:left;padding:8px;border-bottom:1px solid var(--line);}
+  .informe-table td{padding:8px;border-bottom:1px solid #EEF0EB;vertical-align:top;}
+  .informe-table tr:last-child td{border-bottom:none;}
+  .informe-table tr.clickable{cursor:pointer;}
+  .informe-table tr.clickable:hover{background:#FBF6E7;}
+  .informe-empty{padding:18px;text-align:center;color:var(--ink-soft);font-size:12.5px;}
+  .barra-row{display:grid;grid-template-columns:minmax(90px,150px) 1fr 40px;gap:8px;align-items:center;margin:8px 0;font-size:11.5px;}
+  .barra-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .barra-track{height:9px;background:#EEF0EB;border-radius:99px;overflow:hidden;}
+  .barra-fill{height:100%;background:var(--pine-soft);border-radius:99px;}
+  .barra-value{text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-soft);}
+  .detalle-plataforma{background:#FBF6E7;border:1px solid var(--chalk-soft);border-radius:10px;padding:12px;margin-top:10px;}
+  .detalle-plataforma h5{margin:0 0 8px;font-family:'Fraunces',serif;color:var(--pine);font-size:15px;}
+  .detalle-cierre{border:none;background:none;color:var(--brick);font-weight:700;cursor:pointer;font-size:11.5px;float:right;}
+  .informe-loading{padding:25px;text-align:center;color:var(--ink-soft);}
+  @media (max-width:900px){
+    .informe-filtros-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .informe-resumen{grid-template-columns:repeat(3,1fr);}
+  }
+  @media (max-width:600px){
+    .informe-box{padding:18px;}
+    .informe-filtros-grid{grid-template-columns:1fr;}
+    .informe-resumen{grid-template-columns:repeat(2,1fr);}
+    .informe-grid{grid-template-columns:1fr;}
+    .informe-section.full{grid-column:auto;}
   }
 
   /* Impresión: solo título, fecha/contador y la lista de reservas del día */
@@ -390,6 +453,52 @@
     </div>
   </div>
 
+
+  <div class="modal-overlay informe-overlay" id="informesOverlay">
+    <div class="modal-box informe-box">
+      <div class="informe-head">
+        <div>
+          <h3>📊 Informes de uso</h3>
+          <p>Analizá qué plataformas se utilizan, por qué profesores y en qué cursos.</p>
+        </div>
+        <button type="button" class="informe-cerrar" id="btnCerrarInformes">Cerrar</button>
+      </div>
+
+      <div class="informe-filtros">
+        <div class="informe-filtros-grid">
+          <div>
+            <label for="informeDesde">Desde</label>
+            <input type="date" id="informeDesde">
+          </div>
+          <div>
+            <label for="informeHasta">Hasta</label>
+            <input type="date" id="informeHasta">
+          </div>
+          <div>
+            <label for="informeProfesor">Profesor</label>
+            <select id="informeProfesor"></select>
+          </div>
+          <div>
+            <label for="informeCurso">Curso</label>
+            <select id="informeCurso"></select>
+          </div>
+          <div>
+            <label for="informePlataforma">Plataforma</label>
+            <select id="informePlataforma"></select>
+          </div>
+        </div>
+        <div class="informe-filtros-actions">
+          <button type="button" class="informe-btn secondary" id="btnInformeLimpiar">Limpiar filtros</button>
+          <button type="button" class="informe-btn primary" id="btnGenerarInforme">🔄 Generar informe</button>
+        </div>
+      </div>
+
+      <div id="informeContenido">
+        <div class="informe-loading">Elegí los filtros y generá el informe.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="timeline-card">
     <div class="timeline-head">
       <h2>Agenda del día</h2>
@@ -451,7 +560,7 @@
 
       <div class="row2" style="margin-top:16px;">
         <div class="field">
-          <label>Nombre del profesor</label>
+          <label>Profesor / alumno</label>
           <select id="fNombre">
             <option value="">Seleccioná un profesor…</option>
           </select>
@@ -462,6 +571,11 @@
             <option value="">Seleccioná un curso…</option>
           </select>
         </div>
+      </div>
+
+      <div class="field" id="alumnoNombreArea" style="display:none;margin-top:12px;">
+        <label>Nombre del alumno <span style="color:#b94a48;">*</span></label>
+        <input type="text" id="fNombreAlumno" placeholder="Escribí el nombre y apellido del alumno" autocomplete="off">
       </div>
 
       <div class="modo-edicion-aviso" id="modoEdicionAviso" style="display:none;"></div>
@@ -532,10 +646,14 @@ let reservas = [];
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxX0mQaRSl_1ddKLwCg1NQYiAceriqDm9mVx9JHjXlM8_SDdOfLbR7o9LfmJU0pLqfm/exec';
 
 // ---------- estado del formulario ----------
-let grupoSeleccionado = null;         // id de GRUPOS_NETBOOKS o null
-let unidadesSeleccionadas = new Set(); // numeros elegidos dentro del grupo activo
-let extrasSeleccionados = new Set();   // ids de EXTRAS marcados
-let plataformaSeleccionada = null;     // valor de OPCIONES_PLATAFORMA (obligatorio si se usa carrito o sueltas)
+let gruposSeleccionados = new Set();   // puede incluir carrito y netbooks sueltas a la vez
+let unidadesSeleccionadas = {            // unidades elegidas por cada grupo de netbooks
+  carrito_netbooks: new Set(),
+  sueltas_netbooks: new Set()
+};
+let extrasSeleccionados = new Set();     // ids de EXTRAS marcados
+let plataformaSeleccionada = null;       // uso común de la reserva, obligatorio si se usan netbooks
+let nombreAlumno = '';                   // se usa únicamente cuando el solicitante es "Alumno"
 
 // ---------- modo edición (solo con Modo administrador activo) ----------
 let modoEdicion = false;
@@ -716,14 +834,28 @@ function renderSelectsFormulario(){
   const fNombre = document.getElementById('fNombre');
   const prevNombre = fNombre.value;
   fNombre.innerHTML = '<option value="">Seleccioná un profesor…</option>' +
-    profesoresList.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
-  if(profesoresList.some(p => p.nombre === prevNombre)) fNombre.value = prevNombre;
+    profesoresList.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('') +
+    '<option value="Alumno">Alumno</option>';
+  if(prevNombre === 'Alumno' || profesoresList.some(p => p.nombre === prevNombre)) fNombre.value = prevNombre;
+  actualizarCampoAlumno();
 
   const fMateria = document.getElementById('fMateria');
   const prevMateria = fMateria.value;
   fMateria.innerHTML = '<option value="">Seleccioná un curso…</option>' +
     cursosList.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
   if(cursosList.some(c => c.nombre === prevMateria)) fMateria.value = prevMateria;
+}
+
+function actualizarCampoAlumno(){
+  const fNombre = document.getElementById('fNombre');
+  const area = document.getElementById('alumnoNombreArea');
+  const input = document.getElementById('fNombreAlumno');
+  if(!fNombre || !area || !input) return;
+  const esAlumno = fNombre.value === 'Alumno';
+  area.style.display = esAlumno ? 'block' : 'none';
+  input.required = esAlumno;
+  if(!esAlumno) input.value = '';
+  else input.value = nombreAlumno || input.value || '';
 }
 
 /* ---------- modal: administrar profesores y cursos ---------- */
@@ -837,10 +969,12 @@ function renderAdminControls(){
     cont.innerHTML = `
       <div class="admin-badge"><span class="dot"></span>Modo administrador activo</div>
       <button type="button" class="admin-btn" id="btnAbrirListas">⚙️ Administrar profesores y cursos</button>
+      <button type="button" class="admin-btn" id="btnAbrirInformes">📊 Informes</button>
       <button type="button" class="admin-exit-btn" id="btnSalirAdmin">Salir del modo administrador</button>
     `;
     document.getElementById('btnSalirAdmin').addEventListener('click', salirModoAdmin);
     document.getElementById('btnAbrirListas').addEventListener('click', abrirModalAdminListas);
+    document.getElementById('btnAbrirInformes').addEventListener('click', abrirInformes);
   } else {
     cont.innerHTML = `<div class="admin-btn" id="btnAbrirAdmin">🔒 Modo administrador</div>`;
     document.getElementById('btnAbrirAdmin').addEventListener('click', abrirModalAdmin);
@@ -954,16 +1088,27 @@ function renderGrupoChips(){
   cont.innerHTML = GRUPOS_NETBOOKS.map(g => {
     const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
     const libres = g.total - ocupadas.size;
-    const activo = grupoSeleccionado === g.id ? 'active' : '';
+    const activo = gruposSeleccionados.has(g.id) ? 'active' : '';
     return `<div class="chip ${activo}" data-grupo="${g.id}">${g.nombre} <span style="opacity:.7">(${libres}/${g.total} libres)</span></div>`;
-  }).join('') + `<div class="chip ${grupoSeleccionado===null?'active':''}" data-grupo="">No uso netbooks</div>`;
+  }).join('') + `<div class="chip ${gruposSeleccionados.size===0?'active':''}" data-grupo="">No uso netbooks</div>`;
 
   cont.querySelectorAll('.chip').forEach(el => {
     el.addEventListener('click', () => {
       const g = el.getAttribute('data-grupo');
-      grupoSeleccionado = g === '' ? null : g;
-      unidadesSeleccionadas = new Set();
-      plataformaSeleccionada = null;
+      if(g === ''){
+        gruposSeleccionados.clear();
+        unidadesSeleccionadas.carrito_netbooks.clear();
+        unidadesSeleccionadas.sueltas_netbooks.clear();
+        plataformaSeleccionada = null;
+      } else {
+        if(gruposSeleccionados.has(g)){
+          gruposSeleccionados.delete(g);
+          unidadesSeleccionadas[g].clear();
+        } else {
+          gruposSeleccionados.add(g);
+        }
+        if(gruposSeleccionados.size === 0) plataformaSeleccionada = null;
+      }
       renderGrupoChips();
       renderSeccionPlataforma();
       renderSeatGrid();
@@ -974,26 +1119,30 @@ function renderGrupoChips(){
 /* ---------- sección "¿Para qué utilizarás...?" (carrito o netbooks sueltas) ---------- */
 function renderSeccionPlataforma(){
   const area = document.getElementById('plataformaArea');
-  const esCarrito = grupoSeleccionado === 'carrito_netbooks';
-  const esSueltas = grupoSeleccionado === 'sueltas_netbooks';
+  const usaNetbooks = gruposSeleccionados.size > 0;
 
-  if(!esCarrito && !esSueltas){
+  if(!usaNetbooks){
     area.style.display = 'none';
     area.innerHTML = '';
     return;
   }
   area.style.display = 'block';
 
-  const titulo = esCarrito ? '¿Para qué utilizarás el Carrito Edutec?' : '¿Para qué utilizarás las netbooks?';
+  const usaCarrito = gruposSeleccionados.has('carrito_netbooks');
+  const usaSueltas = gruposSeleccionados.has('sueltas_netbooks');
+
+  let titulo = '¿Para qué utilizarás las netbooks?';
+  if(usaCarrito && usaSueltas) titulo = '¿Para qué utilizarás los equipos?';
+  else if(usaCarrito) titulo = '¿Para qué utilizarás el Carrito Edutec?';
 
   let nudgeHtml = '';
-  if(esCarrito && plataformaSeleccionada === 'otro'){
+  if(usaCarrito && plataformaSeleccionada === 'otro' && !usaSueltas){
     const ctx = getFormContext();
     const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
     const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
     const libresSueltas = sueltas.total - ocupadasSueltas.size;
     if(libresSueltas > 0){
-      nudgeHtml = `<div class="uso-nudge show">Para otros usos hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario — dejan el carrito disponible para clases con plataformas educativas. Igual podés seguir con el carrito si lo necesitás.</div>`;
+      nudgeHtml = `<div class="uso-nudge show">Para otros usos hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario.</div>`;
     }
   }
 
@@ -1006,7 +1155,7 @@ function renderSeccionPlataforma(){
   area.innerHTML = `
     <div class="section-label">${titulo}</div>
     <div class="plataforma-box">
-      ${esCarrito ? '<p>El Carrito Edutec es prioritario para clases que utilizan plataformas educativas.</p>' : ''}
+      ${usaCarrito ? '<p>Podés combinar el Carrito Edutec y las netbooks sueltas en una misma reserva.</p>' : ''}
       <div class="plataforma-opciones">${radiosHtml}</div>
       ${nudgeHtml}
     </div>`;
@@ -1025,44 +1174,76 @@ function renderSeatGrid(){
   const grid = document.getElementById('seatGrid');
   const hint = document.getElementById('seatHint');
 
-  if(!grupoSeleccionado){
+  if(gruposSeleccionados.size === 0){
     area.style.display = 'none';
+    grid.innerHTML = '';
+    hint.textContent = '';
     return;
   }
+
   area.style.display = 'block';
-  const g = grupoById(grupoSeleccionado);
   const ctx = getFormContext();
-  const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
 
-  // sacar de la seleccion cualquier numero que haya quedado ocupado
-  unidadesSeleccionadas.forEach(n => { if(ocupadas.has(n)) unidadesSeleccionadas.delete(n); });
+  // Quitar de cada selección las unidades que hayan quedado ocupadas.
+  GRUPOS_NETBOOKS.forEach(g => {
+    if(!gruposSeleccionados.has(g.id)) return;
+    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
+    unidadesSeleccionadas[g.id].forEach(n => {
+      if(ocupadas.has(n)) unidadesSeleccionadas[g.id].delete(n);
+    });
+  });
 
-  grid.innerHTML = Array.from({length:g.total}, (_,i)=>i+1).map(n => {
-    const occ = ocupadas.has(n);
-    const sel = unidadesSeleccionadas.has(n);
-    const cls = occ ? 'occupied' : (sel ? 'selected' : '');
-    return `<div class="seat ${cls}" data-n="${n}">${n}</div>`;
+  grid.innerHTML = Array.from(gruposSeleccionados).map(groupId => {
+    const g = grupoById(groupId);
+    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
+    const seleccion = unidadesSeleccionadas[g.id];
+
+    const seats = Array.from({length:g.total}, (_,i)=>i+1).map(n => {
+      const occ = ocupadas.has(n);
+      const sel = seleccion.has(n);
+      const cls = occ ? 'occupied' : (sel ? 'selected' : '');
+      return `<div class="seat ${cls}" data-group="${g.id}" data-n="${n}">${n}</div>`;
+    }).join('');
+
+    return `
+      <div class="seat-group-block">
+        <div class="seat-group-title">${g.nombre}</div>
+        <div class="seatgrid">${seats}</div>
+        <div class="seat-group-hint">
+          ${seleccion.size === 0
+            ? `Tocá los números de ${g.nombre.toLowerCase()} que vas a usar.`
+            : `Elegiste ${seleccion.size}: ${Array.from(seleccion).sort((a,b)=>a-b).join(', ')}.`}
+        </div>
+      </div>`;
   }).join('');
 
   grid.querySelectorAll('.seat:not(.occupied)').forEach(el => {
     el.addEventListener('click', () => {
+      const groupId = el.getAttribute('data-group');
       const n = parseInt(el.getAttribute('data-n'),10);
-      if(unidadesSeleccionadas.has(n)) unidadesSeleccionadas.delete(n);
-      else unidadesSeleccionadas.add(n);
+      if(unidadesSeleccionadas[groupId].has(n)) unidadesSeleccionadas[groupId].delete(n);
+      else unidadesSeleccionadas[groupId].add(n);
       renderSeatGrid();
     });
   });
 
-  hint.textContent = unidadesSeleccionadas.size === 0
-    ? `Tocá los números de ${g.nombre.toLowerCase()} que vas a usar.`
-    : `Elegiste ${unidadesSeleccionadas.size} de ${g.nombre.toLowerCase()}: ${Array.from(unidadesSeleccionadas).sort((a,b)=>a-b).join(', ')}.`;
+  const totalSeleccionadas = Array.from(gruposSeleccionados)
+    .reduce((sum,id) => sum + unidadesSeleccionadas[id].size, 0);
+  hint.textContent = totalSeleccionadas === 0
+    ? 'Elegí las netbooks que vas a utilizar. Podés combinar ambos grupos en una misma reserva.'
+    : `Total seleccionado: ${totalSeleccionadas} netbook${totalSeleccionadas===1?'':'s'}.`;
 
   document.getElementById('btnSelAll').onclick = () => {
-    for(let n=1; n<=g.total; n++) if(!ocupadas.has(n)) unidadesSeleccionadas.add(n);
+    gruposSeleccionados.forEach(groupId => {
+      const g = grupoById(groupId);
+      const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
+      for(let n=1; n<=g.total; n++) if(!ocupadas.has(n)) unidadesSeleccionadas[groupId].add(n);
+    });
     renderSeatGrid();
   };
+
   document.getElementById('btnSelNone').onclick = () => {
-    unidadesSeleccionadas = new Set();
+    gruposSeleccionados.forEach(groupId => unidadesSeleccionadas[groupId].clear());
     renderSeatGrid();
   };
 }
@@ -1100,6 +1281,8 @@ async function onReservar(){
   const devolIdx = parseInt(document.getElementById('fDevol').value,10);
   const nombre = document.getElementById('fNombre').value.trim();
   const materia = document.getElementById('fMateria').value.trim();
+  const alumnoNombreInput = document.getElementById('fNombreAlumno');
+  const nombreAlumnoActual = nombre === 'Alumno' ? alumnoNombreInput.value.trim() : '';
   const msg = document.getElementById('formMsg');
   msg.className = 'msg';
 
@@ -1113,6 +1296,12 @@ async function onReservar(){
     msg.className = 'msg show error';
     return;
   }
+  if(nombre === 'Alumno' && !nombreAlumnoActual){
+    msg.textContent = 'Escribí el nombre del alumno.';
+    msg.className = 'msg show error';
+    alumnoNombreInput.focus();
+    return;
+  }
   if(!adminMode){
     const { min, max } = limitesFecha();
     if(fecha < min || fecha > max){
@@ -1121,13 +1310,19 @@ async function onReservar(){
       return;
     }
   }
-  if(unidadesSeleccionadas.size === 0 && extrasSeleccionados.size === 0){
+
+  const totalNetbooksSeleccionadas =
+    unidadesSeleccionadas.carrito_netbooks.size +
+    unidadesSeleccionadas.sueltas_netbooks.size;
+
+  if(totalNetbooksSeleccionadas === 0 && extrasSeleccionados.size === 0){
     msg.textContent = 'Elegí al menos una netbook o un equipo para reservar.';
     msg.className = 'msg show error';
     return;
   }
-  if((grupoSeleccionado === 'carrito_netbooks' || grupoSeleccionado === 'sueltas_netbooks') && unidadesSeleccionadas.size > 0 && !plataformaSeleccionada){
-    msg.textContent = `Elegí para qué vas a usar ${grupoSeleccionado === 'carrito_netbooks' ? 'el Carrito Edutec' : 'las netbooks'}.`;
+
+  if(totalNetbooksSeleccionadas > 0 && !plataformaSeleccionada){
+    msg.textContent = 'Elegí para qué vas a usar los equipos.';
     msg.className = 'msg show error';
     return;
   }
@@ -1138,19 +1333,19 @@ async function onReservar(){
   isBusy = true;
 
   try{
-    await loadReservas(document.getElementById('dateInput').value||todayStr()); // releer antes de confirmar, por si alguien reservó en simultáneo
+    await loadReservas(document.getElementById('dateInput').value||todayStr());
 
     const conflictos = [];
     const items = [];
 
-    if(grupoSeleccionado){
-      const g = grupoById(grupoSeleccionado);
+    GRUPOS_NETBOOKS.forEach(g => {
+      if(!gruposSeleccionados.has(g.id)) return;
       const ocupadas = unidadesOcupadas(fecha, g.id, retiroIdx, devolIdx, reservaEditandoId);
-      unidadesSeleccionadas.forEach(n => {
+      unidadesSeleccionadas[g.id].forEach(n => {
         if(ocupadas.has(n)) conflictos.push(`${g.nombre} #${n}`);
         else items.push({ grupo: g.id, unidad: n });
       });
-    }
+    });
 
     EXTRAS.filter(ex => extrasSeleccionados.has(ex.id)).forEach(ex => {
       const ocupadas = unidadesOcupadas(fecha, ex.id, retiroIdx, devolIdx, reservaEditandoId);
@@ -1163,33 +1358,36 @@ async function onReservar(){
       msg.textContent = `Ya no está disponible: ${conflictos.join(', ')}. Se actualizó la grilla, elegí otra opción.`;
       msg.className = 'msg show error';
       renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+      return;
+    }
+
+    const plataformaElegida = totalNetbooksSeleccionadas > 0 ? plataformaSeleccionada : null;
+    const reservaBase = {
+      fecha, retiroIdx, devolIdx, nombre, materia, nombreAlumno: nombreAlumnoActual,
+      items, usoCarrito: plataformaElegida
+    };
+
+    if(modoEdicion){
+      await actualizarReserva({ id: reservaEditandoId, ...reservaBase });
+      msg.textContent = 'Reserva actualizada.';
+      msg.className = 'msg show success';
+      salirModoEdicion();
     } else {
-      const plataformaElegida = (grupoSeleccionado === 'carrito_netbooks' || grupoSeleccionado === 'sueltas_netbooks')
-        ? plataformaSeleccionada
-        : null;
-      // Nota de compatibilidad: Apps Script no se modifica, así que el valor de
-      // "plataforma" se sigue enviando y guardando bajo el nombre de campo
-      // usoCarrito (es el mismo dato, solo cambia cómo se lo trata en el frontend).
-      if(modoEdicion){
-        const reservaActualizada = { id: reservaEditandoId, fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: plataformaElegida };
-        await actualizarReserva(reservaActualizada);
-        msg.textContent = 'Reserva actualizada.';
-        msg.className = 'msg show success';
-        salirModoEdicion();
-      } else {
-        const nuevaReserva = { id: uid(), fecha, retiroIdx, devolIdx, nombre, materia, items, usoCarrito: plataformaElegida, creado: Date.now() };
-        await crearReservaRemota(nuevaReserva);
-        await loadReservas(document.getElementById('dateInput').value||todayStr());
-        msg.textContent = 'Reserva confirmada.';
-        msg.className = 'msg show success';
-        document.getElementById('fNombre').value = '';
-        document.getElementById('fMateria').value = '';
-        grupoSeleccionado = null;
-        unidadesSeleccionadas = new Set();
-        extrasSeleccionados = new Set();
-        plataformaSeleccionada = null;
-        renderAll();
-      }
+      await crearReservaRemota({ id: uid(), ...reservaBase, creado: Date.now() });
+      await loadReservas(document.getElementById('dateInput').value||todayStr());
+      msg.textContent = 'Reserva confirmada.';
+      msg.className = 'msg show success';
+      document.getElementById('fNombre').value = '';
+      document.getElementById('fNombreAlumno').value = '';
+      document.getElementById('fMateria').value = '';
+      nombreAlumno = '';
+      gruposSeleccionados.clear();
+      unidadesSeleccionadas.carrito_netbooks.clear();
+      unidadesSeleccionadas.sueltas_netbooks.clear();
+      extrasSeleccionados.clear();
+      plataformaSeleccionada = null;
+      actualizarCampoAlumno();
+      renderAll();
     }
   }catch(e){
     msg.textContent = modoEdicion ? ('No se pudo guardar la edición: ' + e.message) : 'No se pudo guardar la reserva. Probá de nuevo.';
@@ -1226,7 +1424,7 @@ function renderLanes(fecha){
       const width = ((r.devolIdx - r.retiroIdx)/total)*100;
       const cant = r.items.filter(it => it.grupo === rec.id).length;
       const label = cant > 1 ? `${r.nombre} ×${cant}` : r.nombre;
-      const color = colorProfesor(r.nombre);
+      const color = colorProfesor(solicitanteVisible(r));
       return `<div class="block" style="left:${left}%;width:${width}%;background:${color};" title="${rec.nombre} · ${r.nombre} (${r.materia}) ${SLOTS[r.retiroIdx]}–${SLOTS[r.devolIdx]}">${label}</div>`;
     }).join('');
     return `<div class="lane"><span class="lane-label">${rec.nombre}</span>${blocks}</div>`;
@@ -1325,11 +1523,17 @@ function abrirEdicionReserva(id){
   asegurarOpcionSelect(document.getElementById('fNombre'), r.nombre);
   asegurarOpcionSelect(document.getElementById('fMateria'), r.materia);
 
-  const grupoDelItem = r.items.find(it => it.grupo === 'carrito_netbooks' || it.grupo === 'sueltas_netbooks');
-  grupoSeleccionado = grupoDelItem ? grupoDelItem.grupo : null;
-  unidadesSeleccionadas = new Set(
-    r.items.filter(it => it.grupo === grupoSeleccionado).map(it => it.unidad)
+  nombreAlumno = r.nombreAlumno || '';
+  document.getElementById('fNombreAlumno').value = nombreAlumno;
+  actualizarCampoAlumno();
+
+  gruposSeleccionados = new Set(
+    r.items.filter(it => it.grupo === 'carrito_netbooks' || it.grupo === 'sueltas_netbooks').map(it => it.grupo)
   );
+  unidadesSeleccionadas = {
+    carrito_netbooks: new Set(r.items.filter(it => it.grupo === 'carrito_netbooks').map(it => it.unidad)),
+    sueltas_netbooks: new Set(r.items.filter(it => it.grupo === 'sueltas_netbooks').map(it => it.unidad))
+  };
   extrasSeleccionados = new Set(
     r.items.filter(it => EXTRAS.some(ex => ex.id === it.grupo)).map(it => it.grupo)
   );
@@ -1351,13 +1555,17 @@ function editarReserva(id){ abrirEdicionReserva(id); }
 function salirModoEdicion(){
   modoEdicion = false;
   reservaEditandoId = null;
-  grupoSeleccionado = null;
-  unidadesSeleccionadas = new Set();
-  extrasSeleccionados = new Set();
+  gruposSeleccionados.clear();
+  unidadesSeleccionadas.carrito_netbooks.clear();
+  unidadesSeleccionadas.sueltas_netbooks.clear();
+  extrasSeleccionados.clear();
   plataformaSeleccionada = null;
+  nombreAlumno = '';
 
   document.getElementById('fNombre').value = '';
+  document.getElementById('fNombreAlumno').value = '';
   document.getElementById('fMateria').value = '';
+  actualizarCampoAlumno();
   document.getElementById('btnReservar').textContent = 'Reservar';
   document.getElementById('btnCancelarEdicion').style.display = 'none';
   document.getElementById('modoEdicionAviso').style.display = 'none';
@@ -1478,6 +1686,10 @@ function normalizarBusqueda(str){
   return quitarAcentos(str).toLowerCase();
 }
 
+function solicitanteVisible(r){
+  return r.nombre === 'Alumno' && r.nombreAlumno ? `Alumno: ${r.nombreAlumno}` : r.nombre;
+}
+
 function renderAgenda(fecha){
   const list = document.getElementById('agendaList');
   const count = document.getElementById('agendaCount');
@@ -1494,7 +1706,7 @@ function renderAgenda(fecha){
     const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
     const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
     const usoTag = etiquetaUso ? `<span class="tag">${etiquetaUso}</span>` : '';
-    const color = colorProfesor(r.nombre);
+    const color = colorProfesor(solicitanteVisible(r));
     const enCurso = estaEnCurso(r);
     const badge = enCurso ? `<span class="badge-en-curso">🟢 En curso</span>` : '';
 
@@ -1518,7 +1730,7 @@ function renderAgenda(fecha){
     return `
       <div class="agenda-item ${enCurso ? 'en-curso' : ''}" data-reserva-id="${r.id}" style="border-left:5px solid ${color};">
         <div class="meta">
-          <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}${badge}
+          <span class="prof-dot" style="background:${color};"></span><b>${solicitanteVisible(r)}</b> — ${r.materia}${badge}
           <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
           <div class="items">${tags}${usoTag}${estadoTag}</div>
         </div>
@@ -1537,7 +1749,7 @@ function renderAgenda(fecha){
 // horario y equipos. Reutiliza resumenItems() para no duplicar esa lógica.
 function crearTextoBusqueda(r){
   const partes = [
-    r.nombre, r.materia,
+    r.nombre, r.nombreAlumno, solicitanteVisible(r), r.materia,
     r.fecha, fmtFecha(r.fecha),
     SLOTS[r.retiroIdx], SLOTS[r.devolIdx],
     resumenItems(r.items).join(' '),
@@ -1554,12 +1766,12 @@ function renderTarjetaResultado(r){
   const tags = resumenItems(r.items).map(t => `<span class="tag">${t}</span>`).join('');
   const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
   const usoTag = etiquetaUso ? `<span class="tag">${etiquetaUso}</span>` : '';
-  const color = colorProfesor(r.nombre);
+  const color = colorProfesor(solicitanteVisible(r));
   return `
     <div class="agenda-item resultado-busqueda" style="border-left:5px solid ${color};" onclick="irAReservaEnAgenda('${r.id}','${r.fecha}')">
       <div class="meta">
         <div class="resultado-fecha">${fmtFecha(r.fecha)}</div>
-        <span class="prof-dot" style="background:${color};"></span><b>${r.nombre}</b> — ${r.materia}
+        <span class="prof-dot" style="background:${color};"></span><b>${solicitanteVisible(r)}</b> — ${r.materia}
         <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
         <div class="items">${tags}${usoTag}</div>
       </div>
@@ -1691,6 +1903,273 @@ function tiempoPromedioUso(reservasArr = reservas){
   return Math.round(duraciones.reduce((s, v) => s + v, 0) / duraciones.length);
 }
 
+
+/* ---------- informes de administrador ---------- */
+let informeActual = null;
+
+function anioLectivoPorDefecto(){
+  const hoy = todayStr();
+  return {
+    desde: `${hoy.slice(0,4)}-03-01`,
+    hasta: hoy
+  };
+}
+
+function llenarSelectInforme(selectId, lista, placeholder){
+  const el = document.getElementById(selectId);
+  const actual = el.value;
+  el.innerHTML = `<option value="">${placeholder}</option>` +
+    lista.map(v => {
+      const nombre = typeof v === 'string' ? v : (v.nombre || '');
+      return `<option value="${escapeHtmlAttr(nombre)}">${escapeHtml(nombre)}</option>`;
+    }).join('');
+  if(lista.some(v => (typeof v === 'string' ? v : v.nombre) === actual)) el.value = actual;
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeHtmlAttr(str){ return escapeHtml(str); }
+
+function prepararFiltrosInforme(){
+  const def = anioLectivoPorDefecto();
+  document.getElementById('informeDesde').value = def.desde;
+  document.getElementById('informeHasta').value = def.hasta;
+  llenarSelectInforme('informeProfesor', profesoresList.map(p=>p.nombre), 'Todos los profesores');
+  llenarSelectInforme('informeCurso', cursosList.map(c=>c.nombre), 'Todos los cursos');
+
+  const p = [
+    {v:'', n:'Todas las plataformas'},
+    {v:'cumbre', n:'Cumbre'},
+    {v:'flexflix', n:'Flexflix'},
+    {v:'matific', n:'Matific'},
+    {v:'eduten', n:'Eduten'},
+    {v:'aulas_edutec', n:'Aulas Edutec'},
+    {v:'otro', n:'Otro uso'},
+    {v:'sin_plataforma', n:'Sin plataforma'}
+  ];
+  const sel = document.getElementById('informePlataforma');
+  sel.innerHTML = p.map(x=>`<option value="${escapeHtmlAttr(x.v)}">${escapeHtml(x.n)}</option>`).join('');
+}
+
+function abrirInformes(){
+  if(!adminMode) return;
+  prepararFiltrosInforme();
+  document.getElementById('informesOverlay').classList.add('show');
+  document.getElementById('informeContenido').innerHTML = '<div class="informe-loading">Generando informe…</div>';
+  generarInforme();
+}
+function cerrarInformes(){
+  document.getElementById('informesOverlay').classList.remove('show');
+}
+
+async function cargarInformeRemoto(desde,hasta,profesor,curso,plataforma){
+  const url = `${APPS_SCRIPT_URL}?action=informe&desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}&profesor=${encodeURIComponent(profesor)}&curso=${encodeURIComponent(curso)}&plataforma=${encodeURIComponent(plataforma)}&password=${encodeURIComponent(adminPassword)}`;
+  const res = await fetch(url,{cache:'no-store'});
+  const data = await res.json();
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+
+function formatMes(mes){
+  const [y,m]=mes.split('-');
+  const nombres=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  return nombres[Number(m)-1] ? `${nombres[Number(m)-1]} ${y}` : mes;
+}
+
+function renderBarras(rows, labelKey, maxOverride){
+  if(!rows || rows.length===0) return '<div class="informe-empty">Sin datos en el período seleccionado.</div>';
+  const max = maxOverride || Math.max(...rows.map(r=>Number(r.reservas)||0),1);
+  return rows.map(r => `
+    <div class="barra-row">
+      <div class="barra-label" title="${escapeHtml(r[labelKey])}">${escapeHtml(r[labelKey])}</div>
+      <div class="barra-track"><div class="barra-fill" style="width:${Math.max(2,((Number(r.reservas)||0)/max)*100)}%"></div></div>
+      <div class="barra-value">${r.reservas}</div>
+    </div>`).join('');
+}
+
+function renderTablaPlataformas(rows){
+  if(!rows.length) return '<div class="informe-empty">No hay plataformas registradas en el período.</div>';
+  return `<div class="informe-table-wrap"><table class="informe-table">
+    <thead><tr><th>Plataforma</th><th>Reservas</th><th>Profesores</th><th>Cursos</th></tr></thead>
+    <tbody>${rows.map(r=>`
+      <tr class="clickable" onclick="mostrarDetallePlataforma('${escapeHtmlAttr(r.plataforma)}')">
+        <td><strong>${escapeHtml(r.plataforma)}</strong></td><td>${r.reservas}</td><td>${r.profesores}</td><td>${r.cursos}</td>
+      </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderTablaSimple(rows, nombreKey, tituloKey){
+  if(!rows.length) return '<div class="informe-empty">Sin datos.</div>';
+  return `<div class="informe-table-wrap"><table class="informe-table">
+    <thead><tr><th>${tituloKey}</th><th>Reservas</th></tr></thead>
+    <tbody>${rows.slice(0,50).map(r=>`<tr><td>${escapeHtml(r[nombreKey])}</td><td>${r.reservas}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderEstados(estados){
+  const rows=Object.entries(estados||{}).map(([nombre,reservas])=>({nombre,reservas})).sort((a,b)=>b.reservas-a.reservas);
+  return renderBarras(rows,'nombre');
+}
+
+function renderEquipos(equipos){
+  const rows=[
+    {nombre:'Carrito Edutec',reservas:equipos.carrito||0},
+    {nombre:'Netbooks sueltas',reservas:equipos.sueltas||0},
+    {nombre:'Ambos en la misma reserva',reservas:equipos.ambos||0},
+    {nombre:'Otros equipos',reservas:equipos.otros||0}
+  ].filter(r=>r.reservas>0);
+  return renderBarras(rows,'nombre');
+}
+
+function renderNoRetiradas(rows){
+  if(!rows.length) return '<div class="informe-empty">No hay reservas marcadas como no retiradas.</div>';
+  return `<div class="informe-table-wrap"><table class="informe-table">
+    <thead><tr><th>Fecha</th><th>Solicitante</th><th>Curso</th><th>Plataforma</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td>${fmtFecha(r.fecha)}</td>
+      <td>${escapeHtml(r.profesor)}${r.alumno?`<br><small>${escapeHtml(r.alumno)}</small>`:''}</td>
+      <td>${escapeHtml(r.curso)}</td>
+      <td>${escapeHtml(r.plataforma)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderDetallePlataforma(nombre){
+  if(!informeActual) return;
+  const d = informeActual.detallesPlataforma?.[nombre];
+  const box = document.getElementById('detallePlataforma');
+  if(!box) return;
+  if(!d){
+    box.innerHTML='<div class="informe-empty">No hay detalle para esta plataforma.</div>';
+    return;
+  }
+  const rows=[];
+  Object.entries(d.profesores||{}).forEach(([prof, cursos])=>{
+    Object.entries(cursos).forEach(([curso,cantidad])=>rows.push({prof,curso,cantidad}));
+  });
+  rows.sort((a,b)=>b.cantidad-a.cantidad || a.prof.localeCompare(b.prof,'es'));
+  box.innerHTML=`
+    <button class="detalle-cierre" onclick="document.getElementById('detallePlataforma').innerHTML=''">Cerrar detalle</button>
+    <h5>${escapeHtml(nombre)} · profesores y cursos</h5>
+    <div class="informe-table-wrap">
+      <table class="informe-table">
+        <thead><tr><th>Profesor</th><th>Curso</th><th>Reservas</th></tr></thead>
+        <tbody>${rows.length ? rows.map(r=>`<tr><td>${escapeHtml(r.prof)}</td><td>${escapeHtml(r.curso)}</td><td>${r.cantidad}</td></tr>`).join('') : '<tr><td colspan="3">No hay profesores registrados para esta plataforma.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
+
+function mostrarDetallePlataforma(nombre){
+  renderDetallePlataforma(nombre);
+}
+
+function renderInforme(data){
+  informeActual=data;
+  const r=data.resumen||{};
+  const contenido=document.getElementById('informeContenido');
+  const totalEfectivas=r.efectivas ?? r.reservas ?? 0;
+  const maxMes=Math.max(...(data.meses||[]).map(x=>x.reservas),1);
+
+  contenido.innerHTML=`
+    <div class="informe-resumen">
+      <div class="informe-kpi"><div class="num">${r.reservas||0}</div><div class="lbl">Reservas</div></div>
+      <div class="informe-kpi"><div class="num">${r.profesores||0}</div><div class="lbl">Profesores</div></div>
+      <div class="informe-kpi"><div class="num">${r.plataformas||0}</div><div class="lbl">Plataformas</div></div>
+      <div class="informe-kpi"><div class="num">${r.noRetiradas||0}</div><div class="lbl">No retiradas</div></div>
+      <div class="informe-kpi"><div class="num">${r.canceladas||0}</div><div class="lbl">Canceladas</div></div>
+      <div class="informe-kpi"><div class="num">${totalEfectivas}</div><div class="lbl">Uso efectivo</div></div>
+    </div>
+
+    <div class="informe-grid">
+      <section class="informe-section">
+        <h4>🎓 Uso de plataformas</h4>
+        <p class="sub">Hacé clic en una plataforma para ver profesores y cursos.</p>
+        ${renderTablaPlataformas(data.plataformas||[])}
+        <div class="detalle-plataforma" id="detallePlataforma"></div>
+      </section>
+
+      <section class="informe-section">
+        <h4>💻 Uso de equipos</h4>
+        ${renderEquipos(data.equipos||{})}
+      </section>
+
+      <section class="informe-section">
+        <h4>👨‍🏫 Profesores</h4>
+        ${renderTablaSimple(data.profesores||[],'nombre','Profesor')}
+      </section>
+
+      <section class="informe-section">
+        <h4>🏫 Cursos</h4>
+        ${renderTablaSimple(data.cursos||[],'nombre','Curso')}
+      </section>
+
+      <section class="informe-section">
+        <h4>📅 Evolución mensual</h4>
+        ${renderBarras((data.meses||[]).map(x=>({nombre:formatMes(x.mes),reservas:x.reservas})),'nombre',maxMes)}
+      </section>
+
+      <section class="informe-section">
+        <h4>📦 Estados</h4>
+        ${renderEstados(data.estados)}
+      </section>
+
+      <section class="informe-section full">
+        <h4>⚠️ Reservas no retiradas</h4>
+        ${renderNoRetiradas(data.noRetiradas||[])}
+      </section>
+
+      <section class="informe-section full">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div>
+            <h4 style="margin-bottom:2px;">📥 Datos del informe</h4>
+            <p class="sub" style="margin-bottom:0;">Exportá las reservas del período y filtros seleccionados.</p>
+          </div>
+          <button type="button" class="informe-btn primary" onclick="exportarInformeCSV()">Descargar CSV</button>
+        </div>
+      </section>
+    </div>`;
+}
+
+async function generarInforme(){
+  if(!adminMode || !adminPassword) return;
+  const desde=document.getElementById('informeDesde').value;
+  const hasta=document.getElementById('informeHasta').value;
+  const profesor=document.getElementById('informeProfesor').value;
+  const curso=document.getElementById('informeCurso').value;
+  const plataforma=document.getElementById('informePlataforma').value;
+  if(desde && hasta && desde>hasta){
+    alert('La fecha "Desde" no puede ser posterior a "Hasta".');
+    return;
+  }
+  document.getElementById('informeContenido').innerHTML='<div class="informe-loading">Generando informe…</div>';
+  try{
+    const data=await cargarInformeRemoto(desde,hasta,profesor,curso,plataforma);
+    renderInforme(data);
+  }catch(e){
+    document.getElementById('informeContenido').innerHTML=`<div class="informe-empty">No se pudo generar el informe.<br>${escapeHtml(e.message)}</div>`;
+    if(String(e.message).toLowerCase().includes('contraseña')) salirModoAdmin();
+  }
+}
+
+function exportarInformeCSV(){
+  if(!informeActual || !informeActual.filasExport) return;
+  const rows=[['Fecha','Profesor / solicitante','Alumno','Curso','Plataforma','Equipos','Retiro','Devolución','Estado']];
+  informeActual.filasExport.forEach(r=>{
+    rows.push([
+      fmtFecha(r.fecha), r.profesor, r.alumno, r.curso, r.plataforma,
+      r.equipos, SLOTS[r.retiro] || '', SLOTS[r.devolucion] || '', r.estado
+    ]);
+  });
+  const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`informe_reservas_${todayStr()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
 /* ---------- render general ---------- */
 function renderAll(){
   const fecha = document.getElementById('dateInput').value || todayStr();
@@ -1773,6 +2252,15 @@ async function init(){
   renderSelectsFormulario();
 
   document.getElementById('dateInput').addEventListener('change',async()=>{const fecha=document.getElementById('dateInput').value||todayStr();document.getElementById('agendaList').innerHTML='<div class="loading">Cargando reservas del día…</div>';try{await loadReservas(fecha);renderAll();}catch(e){document.getElementById('agendaList').innerHTML='<div class="empty-state">No se pudieron cargar las reservas de este día.</div>';}});
+  document.getElementById('fNombre').addEventListener('change', () => {
+    nombreAlumno = document.getElementById('fNombre').value === 'Alumno'
+      ? document.getElementById('fNombreAlumno').value.trim()
+      : '';
+    actualizarCampoAlumno();
+  });
+  document.getElementById('fNombreAlumno').addEventListener('input', (ev) => {
+    nombreAlumno = ev.target.value.trim();
+  });
   document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
@@ -1784,6 +2272,16 @@ async function init(){
     resultadosLimite += 20;
     renderResultadosBusqueda(document.getElementById('buscadorGlobal').value);
   });
+  document.getElementById('btnCerrarInformes').addEventListener('click', cerrarInformes);
+  document.getElementById('informesOverlay').addEventListener('click', (ev) => {
+    if(ev.target.id === 'informesOverlay') cerrarInformes();
+  });
+  document.getElementById('btnGenerarInforme').addEventListener('click', generarInforme);
+  document.getElementById('btnInformeLimpiar').addEventListener('click', () => {
+    prepararFiltrosInforme();
+    generarInforme();
+  });
+
   document.getElementById('btnHoy').addEventListener('click', () => {
     const hoy = todayStr();
     document.getElementById('dateInput').value = hoy;
