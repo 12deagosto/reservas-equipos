@@ -472,7 +472,17 @@
   footer{color:#7A8EA3;border-top-color:#D7E2EF;}
   @media(max-width:760px){
     body{background:linear-gradient(180deg,#06111F 0,#0A1A2C 250px,var(--paper) 250px);}
-    .wrap{padding:15px 12px 50px}.school-logo{width:68px;height:68px}.school-brand{gap:11px}.school-brand h1{font-size:22px}.school-brand p{font-size:11px}.school-header-right{width:100%;}.header-status{flex:1}.main-nav{position:sticky;top:6px;z-index:20}.nav-btn{min-height:58px;padding:8px 6px;gap:5px;text-align:center;flex-direction:column}.nav-icon{font-size:22px;min-width:0}.nav-btn b{font-size:11px}.nav-btn small{display:none}.view-heading h2{font-size:23px;}
+    .wrap{padding:15px 12px 50px}.school-logo{width:68px;height:68px}.school-brand{gap:11px}.school-brand h1{font-size:22px}.school-brand p{font-size:11px}.school-header-right{width:100%;}.header-status{flex:1;}
+    /* Navegación móvil: mostrar siempre icono + nombre de la sección.
+       La regla anterior .nav-btn span{display:none} ocultaba ambos. */
+    .main-nav{position:sticky;top:6px;z-index:20;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;}
+    .nav-btn{min-height:72px;padding:8px 4px;gap:4px;text-align:center;flex-direction:column;display:flex;align-items:center;justify-content:center;}
+    .nav-btn > span{display:block;}
+    .nav-btn .nav-icon{display:block;font-size:23px;min-width:0;line-height:1;margin-bottom:3px;}
+    .nav-btn > span:not(.nav-icon){display:block;min-width:0;max-width:100%;}
+    .nav-btn b{display:block;font-size:11px;line-height:1.15;white-space:normal;overflow:visible;text-overflow:clip;}
+    .nav-btn small{display:none;}
+    .view-heading h2{font-size:23px;}
   }
 
 </style>
@@ -608,9 +618,9 @@
   </div>
 
   <nav class="main-nav" aria-label="Navegación principal">
-    <button type="button" class="nav-btn active" data-view="agendaView"><span class="nav-icon">▦</span><span><b>Agenda</b><small>Ver reservas del día</small></span></button>
-    <button type="button" class="nav-btn" data-view="nuevaView"><span class="nav-icon">＋</span><span><b>Nueva reserva</b><small>Reservar equipamiento</small></span></button>
-    <button type="button" class="nav-btn" data-view="buscarView"><span class="nav-icon">⌕</span><span><b>Buscar reserva</b><small>Buscar en todas las fechas</small></span></button>
+    <button type="button" class="nav-btn active" data-view="agendaView" aria-label="Agenda: ver reservas del día"><span class="nav-icon">▦</span><span><b>Agenda</b><small>Ver reservas del día</small></span></button>
+    <button type="button" class="nav-btn" data-view="nuevaView" aria-label="Nueva reserva: reservar equipamiento"><span class="nav-icon">＋</span><span><b>Nueva reserva</b><small>Reservar equipamiento</small></span></button>
+    <button type="button" class="nav-btn" data-view="buscarView" aria-label="Buscar reserva: buscar en todas las fechas"><span class="nav-icon">⌕</span><span><b>Buscar reserva</b><small>Buscar en todas las fechas</small></span></button>
   </nav>
 
   <main>
