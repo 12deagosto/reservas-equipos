@@ -842,35 +842,48 @@ let editandoCursoId = null;
 
 function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
 
-async function cargarReservasFecha(fecha){
+const reservasPromises = new Map();
+const reservasCacheTTL = 60000;
+const reservasCacheTimestamps = new Map();
+
+async function cargarReservasFecha(fecha, forzar=false){
   if(!scriptConfigurado()) return [];
   const dia=fecha||todayStr();
-  const res=await fetch(`${APPS_SCRIPT_URL}?action=list&fecha=${encodeURIComponent(dia)}`,{cache:'no-store'});
-  const data=await res.json();
-  if(data.error) throw new Error(data.error);
-  const lista=(data.reservas||[]).map(r=>({...r,fecha:String(r.fecha).substring(0,10),retiroIdx:Number(r.retiroIdx),devolIdx:Number(r.devolIdx)}));
-  reservasPorFecha.set(dia, lista);
-  return lista;
+  const ahora=Date.now();
+  if(!forzar && reservasPorFecha.has(dia) && (ahora-(reservasCacheTimestamps.get(dia)||0) < reservasCacheTTL)){
+    return reservasPorFecha.get(dia)||[];
+  }
+  if(!forzar && reservasPromises.has(dia)) return reservasPromises.get(dia);
+  const prom=(async()=>{
+    const res=await fetch(`${APPS_SCRIPT_URL}?action=list&fecha=${encodeURIComponent(dia)}`,{cache:'default'});
+    const data=await res.json();
+    if(data.error) throw new Error(data.error);
+    const lista=(data.reservas||[]).map(r=>({...r,fecha:String(r.fecha).substring(0,10),retiroIdx:Number(r.retiroIdx),devolIdx:Number(r.devolIdx)}));
+    reservasPorFecha.set(dia, lista);
+    reservasCacheTimestamps.set(dia, Date.now());
+    return lista;
+  })().finally(()=>reservasPromises.delete(dia));
+  reservasPromises.set(dia,prom);
+  return prom;
 }
-async function loadReservas(fecha){
+async function loadReservas(fecha, forzar=false){
   const dia=fecha||document.getElementById('dateInput')?.value||todayStr();
-  const lista=await cargarReservasFecha(dia);
+  const lista=await cargarReservasFecha(dia, forzar);
   reservas=lista;
   return lista;
 }
 async function asegurarReservasFecha(fecha){
   const dia=fecha||todayStr();
-  if(!reservasPorFecha.has(dia)) await cargarReservasFecha(dia);
-  return reservasPorFecha.get(dia)||[];
+  return await cargarReservasFecha(dia,false);
 }
 async function refrescarReservasFecha(fecha){
   const dia=fecha||todayStr();
-  return await cargarReservasFecha(dia);
+  return await cargarReservasFecha(dia,true);
 }
 function invalidarReservasFecha(fecha){
-  if(fecha) reservasPorFecha.delete(String(fecha).substring(0,10));
+  if(fecha){ const dia=String(fecha).substring(0,10); reservasPorFecha.delete(dia); reservasCacheTimestamps.delete(dia); }
 }
-async function buscarReservasRemoto(query){const res=await fetch(`${APPS_SCRIPT_URL}?action=buscar&q=${encodeURIComponent(query)}`,{cache:'no-store'});const data=await res.json();if(data.error)throw new Error(data.error);return data.reservas||[];}
+async function buscarReservasRemoto(query){const res=await fetch(`${APPS_SCRIPT_URL}?action=buscar&q=${encodeURIComponent(query)}`,{cache:'default'});const data=await res.json();if(data.error)throw new Error(data.error);return data.reservas||[];}
 
 async function crearReservaRemota(reserva){
   const url = `${APPS_SCRIPT_URL}?action=crear&data=${encodeURIComponent(JSON.stringify(reserva))}`;
@@ -2355,15 +2368,14 @@ function renderAll(){
 // ni tocar lo que el usuario ya escribió/eligió en el formulario.
 async function autoRefresh(){
   if(isBusy || !scriptConfigurado()) return;
+  const activeView = document.querySelector('.app-view.active-view')?.id || 'agendaView';
+  if(activeView !== 'agendaView') return;
   try{
     const agendaFecha = document.getElementById('dateInput').value||todayStr();
-    invalidarReservasFecha(agendaFecha);
-    await loadReservas(agendaFecha);
-    const formFecha = document.getElementById('fFecha').value||agendaFecha;
-    if(formFecha !== agendaFecha) await refrescarReservasFecha(formFecha);
+    await loadReservas(agendaFecha, true);
     renderAll();
   }catch(e){
-    // si falla, se mantienen los últimos datos buenos en pantalla; se reintenta en el próximo ciclo
+    // Conserva los últimos datos válidos y reintenta en el próximo ciclo.
   }
 }
 
@@ -2414,7 +2426,13 @@ async function init(){
       '<div class="empty-state">Falta pegar la URL de Apps Script en la constante APPS_SCRIPT_URL, dentro del código del sitio.</div>';
   } else {
     try{
-      await Promise.all([loadReservas(hoy), asegurarReservasFecha(hoy), loadProfesores(), loadCursos()]);
+      const boot = await fetch(`${APPS_SCRIPT_URL}?action=bootstrap`, {cache:'default'}).then(r=>r.json());
+      if(boot.error) throw new Error(boot.error);
+      reservasPorFecha.set(hoy, boot.reservas || []);
+      reservasCacheTimestamps.set(hoy, Date.now());
+      reservas = boot.reservas || [];
+      profesoresList = boot.profesores || [];
+      cursosList = boot.cursos || [];
     }catch(e){
       document.getElementById('agendaList').innerHTML =
         '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
@@ -2449,9 +2467,11 @@ async function init(){
   });
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
+  let busquedaTimer = null;
   document.getElementById('buscadorGlobal').addEventListener('input', (ev) => {
     resultadosLimite = 20;
-    renderResultadosBusqueda(ev.target.value);
+    clearTimeout(busquedaTimer);
+    busquedaTimer = setTimeout(() => renderResultadosBusqueda(ev.target.value), 300);
   });
   document.getElementById('btnVerMasResultados').addEventListener('click', () => {
     resultadosLimite += 20;
@@ -2512,7 +2532,7 @@ async function init(){
     if(ev.target.id === 'historialOverlay') cerrarModalHistorial();
   });
 
-  setInterval(autoRefresh, 30000);
+  setInterval(autoRefresh, 60000);
 
   document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => cambiarVista(btn.dataset.view)));
   document.getElementById('btnFechaAnterior').addEventListener('click', () => moverFechaAgenda(-1));
