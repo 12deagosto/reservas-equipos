@@ -640,6 +640,9 @@ function colorProfesor(nombre){
 }
 
 let reservas = [];
+// Cache en memoria por fecha: permite mantener la agenda de un día y, al mismo tiempo,
+// conocer la disponibilidad del día que se está configurando en el formulario.
+const reservasPorFecha = new Map();
 
 // ---------- conexión con Google Sheets vía Apps Script ----------
 // Pegá acá la URL que te da Apps Script al "Implementar como aplicación web" (termina en /exec)
@@ -736,10 +739,33 @@ let editandoCursoId = null;
 
 function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
 
+async function cargarReservasFecha(fecha){
+  if(!scriptConfigurado()) return [];
+  const dia=fecha||todayStr();
+  const res=await fetch(`${APPS_SCRIPT_URL}?action=list&fecha=${encodeURIComponent(dia)}`,{cache:'no-store'});
+  const data=await res.json();
+  if(data.error) throw new Error(data.error);
+  const lista=(data.reservas||[]).map(r=>({...r,fecha:String(r.fecha).substring(0,10),retiroIdx:Number(r.retiroIdx),devolIdx:Number(r.devolIdx)}));
+  reservasPorFecha.set(dia, lista);
+  return lista;
+}
 async function loadReservas(fecha){
-  if(!scriptConfigurado()){reservas=[];return;}
   const dia=fecha||document.getElementById('dateInput')?.value||todayStr();
-  try{const res=await fetch(`${APPS_SCRIPT_URL}?action=list&fecha=${encodeURIComponent(dia)}`,{cache:'no-store'});const data=await res.json();if(data.error)throw new Error(data.error);reservas=(data.reservas||[]).map(r=>({...r,fecha:String(r.fecha).substring(0,10),retiroIdx:Number(r.retiroIdx),devolIdx:Number(r.devolIdx)}));}catch(e){reservas=[];throw e;}
+  const lista=await cargarReservasFecha(dia);
+  reservas=lista;
+  return lista;
+}
+async function asegurarReservasFecha(fecha){
+  const dia=fecha||todayStr();
+  if(!reservasPorFecha.has(dia)) await cargarReservasFecha(dia);
+  return reservasPorFecha.get(dia)||[];
+}
+async function refrescarReservasFecha(fecha){
+  const dia=fecha||todayStr();
+  return await cargarReservasFecha(dia);
+}
+function invalidarReservasFecha(fecha){
+  if(fecha) reservasPorFecha.delete(String(fecha).substring(0,10));
 }
 async function buscarReservasRemoto(query){const res=await fetch(`${APPS_SCRIPT_URL}?action=buscar&q=${encodeURIComponent(query)}`,{cache:'no-store'});const data=await res.json();if(data.error)throw new Error(data.error);return data.reservas||[];}
 
@@ -1044,9 +1070,9 @@ function rangesOverlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart 
 // cuentan como ocupación: liberan sus equipos de inmediato.
 function unidadesOcupadas(fecha, grupoId, retiroIdx, devolIdx, excluirId){
   const set = new Set();
-  reservas
-    .filter(r => r.fecha === fecha
-      && r.id !== excluirId
+  const delDia = reservasPorFecha.get(fecha) || (reservas.filter(r => r.fecha === fecha));
+  delDia
+    .filter(r => r.id !== excluirId
       && !ESTADOS_QUE_LIBERAN_EQUIPO.includes(estadoDeReserva(r))
       && rangesOverlap(retiroIdx, devolIdx, r.retiroIdx, r.devolIdx))
     .forEach(r => r.items.filter(it => it.grupo === grupoId).forEach(it => set.add(it.unidad)));
@@ -1333,7 +1359,8 @@ async function onReservar(){
   isBusy = true;
 
   try{
-    await loadReservas(document.getElementById('dateInput').value||todayStr());
+    // Refrescar la fecha del formulario antes de validar para no trabajar con disponibilidad antigua.
+    await refrescarReservasFecha(fecha);
 
     const conflictos = [];
     const items = [];
@@ -1368,12 +1395,16 @@ async function onReservar(){
     };
 
     if(modoEdicion){
-      await actualizarReserva({ id: reservaEditandoId, ...reservaBase });
+      const reservaOriginal = reservas.find(r => r.id === reservaEditandoId);
+      const fechaAnterior = reservaOriginal ? reservaOriginal.fecha : fecha;
+      await actualizarReserva({ id: reservaEditandoId, ...reservaBase }, fechaAnterior);
       msg.textContent = 'Reserva actualizada.';
       msg.className = 'msg show success';
       salirModoEdicion();
     } else {
       await crearReservaRemota({ id: uid(), ...reservaBase, creado: Date.now() });
+      invalidarReservasFecha(fecha);
+      invalidarReservasFecha(document.getElementById('dateInput').value||todayStr());
       await loadReservas(document.getElementById('dateInput').value||todayStr());
       msg.textContent = 'Reserva confirmada.';
       msg.className = 'msg show success';
@@ -1476,7 +1507,10 @@ async function ejecutarCancelacion(id){
 
   isBusy = true;
   try{
+    const r = reservas.find(x => x.id === id);
     await cancelarReservaRemota(id, adminPassword);
+    invalidarReservasFecha(r ? r.fecha : '');
+    invalidarReservasFecha(document.getElementById('dateInput').value||todayStr());
     await loadReservas(document.getElementById('dateInput').value||todayStr());
     renderAll();
   }catch(e){
@@ -1575,9 +1609,13 @@ function salirModoEdicion(){
 }
 
 // Envía al backend los datos ya validados de una reserva en edición (mismo id, no crea una nueva)
-async function actualizarReserva(reservaActualizada){
+async function actualizarReserva(reservaActualizada, fechaAnterior){
   await editarReservaRemota(reservaActualizada, adminPassword);
+  invalidarReservasFecha(fechaAnterior);
+  invalidarReservasFecha(reservaActualizada.fecha);
+  invalidarReservasFecha(document.getElementById('dateInput').value||todayStr());
   await loadReservas(document.getElementById('dateInput').value||todayStr());
+  await asegurarReservasFecha(reservaActualizada.fecha);
 }
 
 /* ---------- estados: entregar / devolver / no retirada ---------- */
@@ -1597,6 +1635,8 @@ async function cambiarEstadoReserva(id, nuevoEstado, evento){
   isBusy = true;
   try{
     await cambiarEstadoReservaRemoto(id, nuevoEstado, evento, adminPassword);
+    invalidarReservasFecha(r.fecha);
+    invalidarReservasFecha(document.getElementById('dateInput').value||todayStr());
     await loadReservas(document.getElementById('dateInput').value||todayStr());
     renderAll();
   }catch(e){
@@ -2188,7 +2228,11 @@ function renderAll(){
 async function autoRefresh(){
   if(isBusy || !scriptConfigurado()) return;
   try{
-    await loadReservas(document.getElementById('dateInput').value||todayStr());
+    const agendaFecha = document.getElementById('dateInput').value||todayStr();
+    invalidarReservasFecha(agendaFecha);
+    await loadReservas(agendaFecha);
+    const formFecha = document.getElementById('fFecha').value||agendaFecha;
+    if(formFecha !== agendaFecha) await refrescarReservasFecha(formFecha);
     renderAll();
   }catch(e){
     // si falla, se mantienen los últimos datos buenos en pantalla; se reintenta en el próximo ciclo
@@ -2242,7 +2286,7 @@ async function init(){
       '<div class="empty-state">Falta pegar la URL de Apps Script en la constante APPS_SCRIPT_URL, dentro del código del sitio.</div>';
   } else {
     try{
-      await Promise.all([loadReservas(), loadProfesores(), loadCursos()]);
+      await Promise.all([loadReservas(hoy), asegurarReservasFecha(hoy), loadProfesores(), loadCursos()]);
     }catch(e){
       document.getElementById('agendaList').innerHTML =
         '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
@@ -2261,7 +2305,16 @@ async function init(){
   document.getElementById('fNombreAlumno').addEventListener('input', (ev) => {
     nombreAlumno = ev.target.value.trim();
   });
-  document.getElementById('fFecha').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderAll(); });
+  document.getElementById('fFecha').addEventListener('change', async () => {
+    const fecha = document.getElementById('fFecha').value || todayStr();
+    try {
+      await asegurarReservasFecha(fecha);
+      renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+    } catch(e) {
+      document.getElementById('formMsg').textContent = 'No se pudo cargar la disponibilidad de esa fecha.';
+      document.getElementById('formMsg').className = 'msg show error';
+    }
+  });
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); });
   document.getElementById('buscadorGlobal').addEventListener('input', (ev) => {
@@ -2282,12 +2335,18 @@ async function init(){
     generarInforme();
   });
 
-  document.getElementById('btnHoy').addEventListener('click', () => {
+  document.getElementById('btnHoy').addEventListener('click', async () => {
     const hoy = todayStr();
     document.getElementById('dateInput').value = hoy;
     document.getElementById('fFecha').value = hoy;
-    renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
-    renderAll();
+    try {
+      await loadReservas(hoy);
+      await asegurarReservasFecha(hoy);
+      renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+      renderAll();
+    } catch(e) {
+      document.getElementById('agendaList').innerHTML = '<div class="empty-state">No se pudieron cargar las reservas de hoy.</div>';
+    }
   });
   document.getElementById('btnImprimir').addEventListener('click', () => window.print());
   document.getElementById('btnReservar').addEventListener('click', onReservar);
