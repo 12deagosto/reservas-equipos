@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Escuela 4-144 · 12 de Agosto · Reservas Edutec</title>
+<link rel="apple-touch-icon" 
+<meta name="theme-color" content="#07111F">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -159,14 +161,25 @@
   .agenda-item .horario{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);margin-top:3px;}
   .agenda-item .items{font-size:12px;color:var(--ink-soft);margin-top:6px;line-height:1.5;}
   .agenda-item .tag{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--pine-soft);background:#E7F0E2;padding:2px 7px;border-radius:5px;margin:4px 4px 0 0;}
-  .agenda-item button{border:none;background:none;color:var(--brick);font-size:12px;cursor:pointer;font-weight:600;padding:4px 6px;white-space:nowrap;}
-  .agenda-item button:hover{text-decoration:underline;}
-  .agenda-item .acciones{display:flex;flex-direction:column;gap:2px;align-items:flex-end;}
-  .agenda-item .btn-editar{color:var(--pine-soft);}
-  .agenda-item .btn-entregar{color:#2F6FA8;}
-  .agenda-item .btn-devolver{color:var(--pine);}
-  .agenda-item .btn-no-retirada{color:#B9860B;}
-  .agenda-item .btn-historial{color:var(--ink-soft);}
+  .agenda-item .acciones{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;align-items:center;max-width:100%;}
+  .agenda-item .acciones button{
+    border:1px solid #D6E1ED;background:#fff;color:#18324B;border-radius:8px;
+    min-height:34px;padding:7px 10px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    font:700 11.5px 'Inter',sans-serif;cursor:pointer;white-space:nowrap;
+    box-shadow:0 1px 2px rgba(16,24,40,.04);transition:transform .12s,box-shadow .12s,background .12s,border-color .12s,color .12s;
+  }
+  .agenda-item .acciones button:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(15,42,68,.10);}
+  .agenda-item .acciones button:active{transform:translateY(0);}
+  .agenda-item .acciones button:disabled{opacity:.6;cursor:wait;transform:none;box-shadow:none;}
+  .agenda-item .acciones .accion-icon{font-size:14px;line-height:1;}
+  .agenda-item .acciones .btn-editar{color:#0B72D1;border-color:#BBD8F2;background:#F4FAFF;}
+  .agenda-item .acciones .btn-entregar{color:#167447;border-color:#BFE3D0;background:#F1FBF5;}
+  .agenda-item .acciones .btn-devolver{color:#0B4EA2;border-color:#BFD3EE;background:#F1F6FD;}
+  .agenda-item .acciones .btn-no-retirada{color:#8A5B00;border-color:#E8D29A;background:#FFF9E8;}
+  .agenda-item .acciones .btn-cancelar{color:#B42318;border-color:#F0C5C0;background:#FFF6F5;}
+  .agenda-item .acciones .btn-historial{color:#526274;border-color:#D8E0E8;background:#F8FAFC;}
+  .agenda-item .acciones .btn-accion-busy{pointer-events:none;}
+  @media(max-width:760px){.agenda-item{flex-direction:column}.agenda-item .acciones{justify-content:flex-start;width:100%;}.agenda-item .acciones button{flex:1 1 auto;min-width:98px;}}
 
   .tag-estado{
     display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;
@@ -1636,6 +1649,7 @@ function abrirEdicionReserva(id){
 
   modoEdicion = true;
   reservaEditandoId = id;
+  cambiarVista('nuevaView');
 
   document.getElementById('dateInput').value = r.fecha;
   document.getElementById('fFecha').value = r.fecha;
@@ -1671,7 +1685,7 @@ function abrirEdicionReserva(id){
   aviso.textContent = `Editando la reserva de ${r.nombre} — ${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]} del ${fmtFecha(r.fecha)}.`;
 
   renderAll();
-  document.getElementById('agendaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('nuevaView').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 // Alias con el nombre pedido: abre el formulario de edición para una reserva
 function editarReserva(id){ abrirEdicionReserva(id); }
@@ -1712,10 +1726,16 @@ async function actualizarReserva(reservaActualizada, fechaAnterior){
 
 // Transición genérica: valida localmente contra TRANSICIONES_VALIDAS antes de
 // llamar al servidor (que la vuelve a validar), y refresca la vista al terminar.
-async function cambiarEstadoReserva(id, nuevoEstado, evento){
+async function cambiarEstadoReserva(id, nuevoEstado, evento, sourceButton){
   if(!adminMode || !adminPassword) return;
   const r = reservas.find(x => x.id === id);
   if(!r) return;
+  if(sourceButton){
+    sourceButton.disabled = true;
+    sourceButton.classList.add('btn-accion-busy');
+    const label = sourceButton.querySelector('span:last-child');
+    if(label) label.textContent = nuevoEstado === 'Entregada' ? 'Guardando…' : nuevoEstado === 'Devuelta' ? 'Guardando…' : 'Guardando…';
+  }
   const estadoActual = estadoDeReserva(r);
   if(!(TRANSICIONES_VALIDAS[estadoActual] || []).includes(nuevoEstado)){
     alert(`No se puede pasar de "${estadoActual}" a "${nuevoEstado}".`);
@@ -1734,20 +1754,24 @@ async function cambiarEstadoReserva(id, nuevoEstado, evento){
     salirModoAdmin();
   }finally{
     isBusy = false;
+    if(sourceButton && document.body.contains(sourceButton)){
+      sourceButton.disabled = false;
+      sourceButton.classList.remove('btn-accion-busy');
+    }
   }
 }
 
-function marcarEntregada(id){
-  cambiarEstadoReserva(id, 'Entregada', 'Equipos entregados');
+function marcarEntregada(id, btn){
+  cambiarEstadoReserva(id, 'Entregada', 'Equipos entregados', btn);
 }
-function marcarDevuelta(id){
-  cambiarEstadoReserva(id, 'Devuelta', 'Equipos devueltos');
+function marcarDevuelta(id, btn){
+  cambiarEstadoReserva(id, 'Devuelta', 'Equipos devueltos', btn);
 }
-function marcarNoRetirada(id){
+function marcarNoRetirada(id, btn){
   const r = reservas.find(x => x.id === id);
   if(!r) return;
   if(!confirm(`¿Marcar como "No retirada" la reserva de ${r.nombre} (${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]})? Se liberan sus equipos y deja de verse en el timeline del día.`)) return;
-  cambiarEstadoReserva(id, 'No retirada', 'Marcada como No retirada');
+  cambiarEstadoReserva(id, 'No retirada', 'Marcada como No retirada', btn);
 }
 
 /* ---------- historial de eventos ---------- */
@@ -1848,13 +1872,13 @@ function renderAgenda(fecha){
     let acciones = '';
     if(adminMode){
       const botones = [];
-      botones.push(`<button class="btn-editar" onclick="editarReserva('${r.id}')">✏️ Editar</button>`);
-      if(permitidos.includes('Entregada')) botones.push(`<button class="btn-entregar" onclick="marcarEntregada('${r.id}')">📦 Marcar como entregada</button>`);
-      if(permitidos.includes('Devuelta')) botones.push(`<button class="btn-devolver" onclick="marcarDevuelta('${r.id}')">✅ Marcar como devuelta</button>`);
-      if(permitidos.includes('No retirada')) botones.push(`<button class="btn-no-retirada" onclick="marcarNoRetirada('${r.id}')">⚠️ No retirada</button>`);
-      if(permitidos.includes('Cancelada')) botones.push(`<button onclick="abrirModalConfirmarCancelar('${r.id}')">Cancelar</button>`);
-      botones.push(`<button class="btn-historial" onclick="abrirModalHistorial('${r.id}')">🕒 Historial</button>`);
-      acciones = `<div class="acciones">${botones.join('')}</div>`;
+      botones.push(`<button type="button" class="btn-editar" title="Editar reserva" data-reserva-action="editar" data-reserva-id="${r.id}" onclick="editarReserva('${r.id}')"><span class="accion-icon">✎</span><span>Editar</span></button>`);
+      if(permitidos.includes('Entregada')) botones.push(`<button type="button" class="btn-entregar" title="Marcar como entregada" data-reserva-action="estado" data-reserva-id="${r.id}" onclick="marcarEntregada('${r.id}', this)"><span class="accion-icon">✓</span><span>Entregada</span></button>`);
+      if(permitidos.includes('Devuelta')) botones.push(`<button type="button" class="btn-devolver" title="Marcar como devuelta" data-reserva-action="estado" data-reserva-id="${r.id}" onclick="marcarDevuelta('${r.id}', this)"><span class="accion-icon">↩</span><span>Devuelta</span></button>`);
+      if(permitidos.includes('No retirada')) botones.push(`<button type="button" class="btn-no-retirada" title="Marcar como no retirada" data-reserva-action="estado" data-reserva-id="${r.id}" onclick="marcarNoRetirada('${r.id}', this)"><span class="accion-icon">!</span><span>No retirada</span></button>`);
+      if(permitidos.includes('Cancelada')) botones.push(`<button type="button" class="btn-cancelar" title="Cancelar reserva" data-reserva-action="cancelar" data-reserva-id="${r.id}" onclick="abrirModalConfirmarCancelar('${r.id}')"><span class="accion-icon">×</span><span>Cancelar</span></button>`);
+      botones.push(`<button type="button" class="btn-historial" title="Ver historial" data-reserva-action="historial" data-reserva-id="${r.id}" onclick="abrirModalHistorial('${r.id}')"><span class="accion-icon">◷</span><span>Historial</span></button>`);
+      acciones = `<div class="acciones" aria-label="Acciones de la reserva">${botones.join('')}</div>`;
     }
 
     return `
@@ -1938,15 +1962,22 @@ async function renderResultadosBusqueda(query){
 
 // Al hacer clic en un resultado: cambia la fecha del timeline/agenda,
 // desplaza hasta esa reserva y la resalta unos segundos.
-function irAReservaEnAgenda(id, fecha){
+async function irAReservaEnAgenda(id, fecha){
+  cambiarVista('agendaView');
   document.getElementById('dateInput').value = fecha;
-  renderAll();
-
-  const el = document.querySelector(`.agenda-item[data-reserva-id="${id}"]`);
-  if(el){
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('resaltado-temporal');
-    setTimeout(() => el.classList.remove('resaltado-temporal'), 3000);
+  const agendaList = document.getElementById('agendaList');
+  agendaList.innerHTML = '<div class="loading">Cargando la reserva…</div>';
+  try{
+    await loadReservas(fecha);
+    renderAll();
+    const el = document.querySelector(`.agenda-item[data-reserva-id="${id}"]`);
+    if(el){
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('resaltado-temporal');
+      setTimeout(() => el.classList.remove('resaltado-temporal'), 3000);
+    }
+  }catch(e){
+    agendaList.innerHTML = '<div class="empty-state">No se pudo cargar la reserva seleccionada.</div>';
   }
 }
 
@@ -2302,14 +2333,21 @@ function exportarInformeCSV(){
 
 /* ---------- render general ---------- */
 function renderAll(){
-  const fecha = document.getElementById('dateInput').value || todayStr();
-  document.getElementById('timelineDate').textContent = fmtFecha(fecha);
-  renderLanes(fecha);
-  renderAgenda(fecha);
-  renderGrupoChips();
-  renderSeccionPlataforma();
-  renderSeatGrid();
-  renderExtrasGrid();
+  const activeView = document.querySelector('.app-view.active-view')?.id || 'agendaView';
+  if(activeView === 'agendaView'){
+    const fecha = document.getElementById('dateInput').value || todayStr();
+    document.getElementById('timelineDate').textContent = fmtFecha(fecha);
+    renderLanes(fecha);
+    renderAgenda(fecha);
+    return;
+  }
+  if(activeView === 'nuevaView'){
+    renderGrupoChips();
+    renderSeccionPlataforma();
+    renderSeatGrid();
+    renderExtrasGrid();
+  }
+  // Buscar se renderiza exclusivamente desde su buscador; no toca la agenda.
 }
 
 /* ---------- actualización automática ---------- */
@@ -2482,9 +2520,21 @@ async function init(){
 }
 
 function cambiarVista(viewId){
-  document.querySelectorAll('.app-view').forEach(v => v.style.display = v.id === viewId ? 'block' : 'none');
+  document.querySelectorAll('.app-view').forEach(v => {
+    const active = v.id === viewId;
+    v.style.display = active ? 'block' : 'none';
+    v.classList.toggle('active-view', active);
+  });
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === viewId));
   if(viewId === 'buscarView') document.getElementById('buscadorGlobal')?.focus();
+  if(viewId !== 'buscarView'){
+    const card = document.getElementById('resultadosBusquedaCard');
+    if(card) card.style.display = 'none';
+  }
+  if(viewId === 'agendaView') renderAll();
+  if(viewId === 'nuevaView'){
+    renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+  }
 }
 function moverFechaAgenda(delta){
   const input=document.getElementById('dateInput');
