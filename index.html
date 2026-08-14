@@ -1002,9 +1002,14 @@ async function buscarReservasRemoto(query){const res=await fetch(`${APPS_SCRIPT_
 
 async function crearReservaRemota(reserva){
   const url = `${APPS_SCRIPT_URL}?action=crear&data=${encodeURIComponent(JSON.stringify(reserva))}`;
-  const res = await fetch(url);
-  const data = await res.json();
+  const res = await fetch(url,{cache:'no-store'});
+  const texto = await res.text();
+  let data;
+  try { data = JSON.parse(texto); } catch(err) { throw new Error(`El servidor respondió de forma inesperada (${res.status}).`); }
+  if(!res.ok) throw new Error(data.error || `Error del servidor (${res.status}).`);
   if(data.error) throw new Error(data.error);
+  if(data.ok !== true) throw new Error('El servidor no confirmó la reserva.');
+  return data;
 }
 
 async function editarReservaRemota(reserva, password){
@@ -1773,7 +1778,8 @@ async function onReservar(){
       renderAll();
     }
   }catch(e){
-    msg.textContent = modoEdicion ? ('No se pudo guardar la edición: ' + e.message) : 'No se pudo guardar la reserva. Probá de nuevo.';
+    const detalle = e && e.message ? e.message : 'Error desconocido';
+    msg.textContent = modoEdicion ? ('No se pudo guardar la edición: ' + detalle) : ('No se pudo guardar la reserva: ' + detalle);
     msg.className = 'msg show error';
   }finally{
     btn.disabled = false;
