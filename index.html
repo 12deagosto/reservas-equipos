@@ -405,9 +405,17 @@
 
   #adminControls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 
-  /* Modal: administrar profesores y cursos */
-  .modal-box-wide{max-width:460px;}
-  .admin-list-section{margin-bottom:18px;}
+  /* Modal: administración compacta y desplegable */
+  .modal-box-wide{max-width:520px;max-height:min(88vh,760px);overflow:auto;}
+  .admin-list-section{margin-bottom:10px;}
+  .admin-accordion{border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:10px;overflow:hidden;}
+  .admin-accordion summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;font-family:'Inter',system-ui,sans-serif;font-size:15px;font-weight:800;color:var(--pine);background:#F7FAFD;}
+  .admin-accordion summary::-webkit-details-marker{display:none;}
+  .admin-accordion summary::after{content:'＋';font-size:20px;line-height:1;color:var(--pine-soft);font-weight:500;}
+  .admin-accordion[open] summary::after{content:'−';}
+  .admin-accordion summary span{display:flex;align-items:center;gap:8px;}
+  .admin-accordion-body{padding:12px 14px 14px;}
+  .admin-list-section h4{font-family:'Inter',system-ui,sans-serif;font-size:15px;margin:0 0 8px;color:var(--pine);}
   .admin-list-section h4{font-family:'Inter',system-ui,sans-serif;font-size:15px;margin:0 0 8px;color:var(--pine);}
   .admin-list-add{display:flex;gap:6px;margin-bottom:10px;}
   .admin-list-add input{flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;}
@@ -426,6 +434,13 @@
   .admin-list-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
   .sr-only-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
   .horario-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .horario-range-buttons{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:7px;}
+  .horario-ayuda{font-size:12px;color:var(--ink-soft);line-height:1.45;margin-top:4px;}
+  .hora-btn{position:relative;}
+  .hora-btn em{display:block;font-style:normal;font-size:9px;font-weight:800;letter-spacing:.06em;margin-top:3px;opacity:.9;}
+  .hora-btn.range-start{box-shadow:inset 3px 0 0 #0B72D1;}
+  .hora-btn.range-end{box-shadow:inset -3px 0 0 #0B72D1;}
+  @media (max-width:520px){.horario-range-buttons{grid-template-columns:1fr 1fr;}}
   .hora-btn{border:1px solid #C9D9E8;background:#fff;color:#18324D;border-radius:10px;padding:9px 8px;cursor:pointer;text-align:left;transition:.12s;font-family:'Inter',sans-serif;}
   .hora-btn strong{display:block;font-size:12px}.hora-btn span{display:block;font-size:10.5px;color:#667085;margin-top:2px}.hora-btn:hover{border-color:#1187E8;background:#F4FAFF}.hora-btn.active{background:#0B72D1;border-color:#0B72D1;color:#fff}.hora-btn.active span{color:#D9F3FF}.hora-btn.disabled{opacity:.4;cursor:not-allowed;background:#F2F4F7;border-color:#D7E2EF;}
   .admin-modal-subtitle{margin:-2px 0 16px!important;font-size:12px!important;color:#667085!important;}
@@ -556,29 +571,35 @@
       <h3>⚙️ Administración</h3>
       <p class="admin-modal-subtitle">Profesores, cursos y estado técnico de los equipos.</p>
 
-      <div class="admin-list-section">
-        <h4>Profesores</h4>
-        <div class="admin-list-add">
-          <input type="text" id="nuevoProfesorInput" placeholder="Nombre del profesor">
-          <button type="button" id="btnAgregarProfesor">Agregar</button>
+      <details class="admin-accordion">
+        <summary><span>👨‍🏫 Profesores</span></summary>
+        <div class="admin-accordion-body">
+          <div class="admin-list-add">
+            <input type="text" id="nuevoProfesorInput" placeholder="Nombre del profesor">
+            <button type="button" id="btnAgregarProfesor">Agregar</button>
+          </div>
+          <div class="admin-list-rows" id="listaProfesores"></div>
         </div>
-        <div class="admin-list-rows" id="listaProfesores"></div>
-      </div>
+      </details>
 
-      <div class="admin-list-section">
-        <h4>Cursos / materias</h4>
-        <div class="admin-list-add">
-          <input type="text" id="nuevoCursoInput" placeholder="Nombre del curso">
-          <button type="button" id="btnAgregarCurso">Agregar</button>
+      <details class="admin-accordion">
+        <summary><span>📚 Cursos / materias</span></summary>
+        <div class="admin-accordion-body">
+          <div class="admin-list-add">
+            <input type="text" id="nuevoCursoInput" placeholder="Nombre del curso">
+            <button type="button" id="btnAgregarCurso">Agregar</button>
+          </div>
+          <div class="admin-list-rows" id="listaCursos"></div>
         </div>
-        <div class="admin-list-rows" id="listaCursos"></div>
-      </div>
+      </details>
 
-      <div class="admin-list-section">
-        <h4>Equipos</h4>
-        <p class="admin-help">Podés poner un equipo en <strong>baja técnica</strong>. Si tiene una reserva futura, el sistema intenta reasignarlo automáticamente a otro equipo disponible.</p>
-        <div class="admin-list-rows" id="listaEquipos"></div>
-      </div>
+      <details class="admin-accordion">
+        <summary><span>💻 Equipos</span></summary>
+        <div class="admin-accordion-body">
+          <p class="admin-help">Podés poner un equipo en <strong>baja técnica</strong>. Si tiene una reserva futura, el sistema intenta reasignarlo automáticamente a otro equipo disponible.</p>
+          <div class="admin-list-rows" id="listaEquipos"></div>
+        </div>
+      </details>
 
       <div class="modal-actions">
         <button type="button" class="modal-btn-cancel" id="btnCerrarAdminListas">Cerrar</button>
@@ -695,9 +716,12 @@
             <label for="fFecha">Fecha de reserva</label>
             <input type="date" id="fFecha">
           </div>
-          <div class="row2">
-            <div class="field horario-field"><label>Inicio de la reserva</label><div id="horarioRetiroBtns" class="horario-buttons" aria-label="Seleccionar hora de inicio"></div><select id="fRetiro" class="sr-only-select" aria-hidden="true"></select></div>
-            <div class="field horario-field"><label>Fin de la reserva</label><div id="horarioDevolBtns" class="horario-buttons" aria-label="Seleccionar hora de finalización"></div><select id="fDevol" class="sr-only-select" aria-hidden="true"></select></div>
+          <div class="field horario-field">
+            <label>Horario de la reserva</label>
+            <div class="horario-ayuda">Elegí el primer bloque y el último bloque. Por ejemplo, <strong>1ª + 3ª hora</strong> reserva de 7:30 a 9:40.</div>
+            <div id="horarioBtns" class="horario-buttons horario-range-buttons" aria-label="Seleccionar bloques horarios"></div>
+            <select id="fRetiro" class="sr-only-select" aria-hidden="true"></select>
+            <select id="fDevol" class="sr-only-select" aria-hidden="true"></select>
           </div>
           <div id="formFechaEstado" class="availability-status" aria-live="polite">✓ Elegí una fecha para consultar la disponibilidad.</div>
 
@@ -1347,37 +1371,39 @@ function getFormContext(){
   };
 }
 
-/* ---------- selects de horario ---------- */
-function horarioBotonHtml(h, tipo, activo, disabled){
-  return `<button type="button" class="hora-btn ${activo?'active':''} ${disabled?'disabled':''}" data-horario-tipo="${tipo}" data-inicio-idx="${h.inicioIdx}" data-fin-idx="${h.finIdx}" ${disabled?'disabled':''}><strong>${h.n}ª hora</strong><span>${h.inicio} → ${h.fin}</span></button>`;
+/* ---------- selección de bloques horarios ---------- */
+function horarioBotonRangoHtml(h, i, inicioHora, finHora){
+  const activo=i>=inicioHora&&i<=finHora;
+  const ini=i===inicioHora, fin=i===finHora;
+  const etiqueta=ini&&fin?'INICIO Y FIN':ini?'DESDE':fin?'HASTA':'';
+  return `<button type="button" class="hora-btn ${activo?'active':''} ${ini?'range-start':''} ${fin?'range-end':''}" data-hora-index="${i}" aria-pressed="${activo}"><strong>${h.n}ª hora</strong><span>${h.inicio} → ${h.fin}</span>${etiqueta?`<em>${etiqueta}</em>`:''}</button>`;
 }
 function fillHorarioSelects(){
-  const fRetiro=document.getElementById('fRetiro');
-  const fDevol=document.getElementById('fDevol');
+  const fRetiro=document.getElementById('fRetiro'), fDevol=document.getElementById('fDevol');
   fRetiro.innerHTML=HORARIOS.map((h,i)=>`<option value="${HORARIO_SLOT_MAP[i].inicioIdx}">${h.inicio}</option>`).join('');
   fDevol.innerHTML=HORARIOS.map((h,i)=>`<option value="${HORARIO_SLOT_MAP[i].finIdx}">${h.fin}</option>`).join('');
-  fRetiro.value='0'; fDevol.value='1';
+  fRetiro.value=String(HORARIO_SLOT_MAP[0].inicioIdx); fDevol.value=String(HORARIO_SLOT_MAP[0].finIdx);
   renderHorarioButtons();
 }
-function updateDevolOptions(){
-  renderHorarioButtons();
+function updateDevolOptions(){renderHorarioButtons();}
+function indiceBloqueDesdeIndices(retiroIdx,devolIdx){
+  let inicio=0,fin=0;
+  HORARIO_SLOT_MAP.forEach((m,i)=>{if(m.inicioIdx===retiroIdx)inicio=i;if(m.finIdx===devolIdx)fin=i;});
+  if(fin<inicio)fin=inicio;
+  return {inicio,fin};
 }
 function renderHorarioButtons(){
-  const inicioIdx=parseInt(document.getElementById('fRetiro').value,10);
-  const finIdx=parseInt(document.getElementById('fDevol').value,10);
-  const r=document.getElementById('horarioRetiroBtns'), d=document.getElementById('horarioDevolBtns');
-  if(!r||!d)return;
-  r.innerHTML=HORARIOS.map((h,i)=>horarioBotonHtml({...h,inicioIdx:HORARIO_SLOT_MAP[i].inicioIdx,finIdx:HORARIO_SLOT_MAP[i].finIdx},'inicio',HORARIO_SLOT_MAP[i].inicioIdx===inicioIdx,false)).join('');
-  d.innerHTML=HORARIOS.map((h,i)=>horarioBotonHtml({...h,inicioIdx:HORARIO_SLOT_MAP[i].inicioIdx,finIdx:HORARIO_SLOT_MAP[i].finIdx},'fin',HORARIO_SLOT_MAP[i].finIdx===finIdx,HORARIO_SLOT_MAP[i].finIdx<=inicioIdx)).join('');
-  r.querySelectorAll('[data-horario-tipo="inicio"]').forEach(btn=>btn.addEventListener('click',()=>{
-    const idx=Number(btn.dataset.inicioIdx); document.getElementById('fRetiro').value=String(idx);
-    const actualFin=Number(document.getElementById('fDevol').value); if(!(actualFin>idx)){
-      const siguiente=HORARIO_SLOT_MAP.find(x=>x.finIdx>idx); document.getElementById('fDevol').value=String(siguiente?siguiente.finIdx:SLOTS.length-1);
-    }
-    renderHorarioButtons(); document.getElementById('fRetiro').dispatchEvent(new Event('change'));
-  }));
-  d.querySelectorAll('[data-horario-tipo="fin"]:not(:disabled)').forEach(btn=>btn.addEventListener('click',()=>{
-    document.getElementById('fDevol').value=String(btn.dataset.finIdx); renderHorarioButtons(); document.getElementById('fDevol').dispatchEvent(new Event('change'));
+  const cont=document.getElementById('horarioBtns'), fRetiro=document.getElementById('fRetiro'), fDevol=document.getElementById('fDevol');
+  if(!cont||!fRetiro||!fDevol)return;
+  const r=indiceBloqueDesdeIndices(parseInt(fRetiro.value,10),parseInt(fDevol.value,10));
+  cont.innerHTML=HORARIOS.map((h,i)=>horarioBotonRangoHtml(h,i,r.inicio,r.fin)).join('');
+  cont.querySelectorAll('[data-hora-index]').forEach(btn=>btn.addEventListener('click',()=>{
+    const clicked=Number(btn.dataset.horaIndex), actual=indiceBloqueDesdeIndices(parseInt(fRetiro.value,10),parseInt(fDevol.value,10));
+    let inicio,fin;
+    if(actual.inicio===actual.fin){inicio=Math.min(actual.inicio,clicked);fin=Math.max(actual.inicio,clicked);}
+    else {inicio=clicked;fin=clicked;}
+    fRetiro.value=String(HORARIO_SLOT_MAP[inicio].inicioIdx); fDevol.value=String(HORARIO_SLOT_MAP[fin].finIdx);
+    renderHorarioButtons(); fRetiro.dispatchEvent(new Event('change')); fDevol.dispatchEvent(new Event('change'));
   }));
 }
 
