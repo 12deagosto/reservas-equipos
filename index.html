@@ -94,7 +94,7 @@
   .swatch{width:10px;height:10px;border-radius:3px;display:inline-block;}
   .swatch.avail{background:#fff;border:1.5px solid var(--pine-soft);}
   .swatch.sel{background:var(--pine);}
-  .swatch.occ{background:var(--occupied);}
+  .swatch.occ{background:var(--occupied);}.swatch.tech{background:#FDE2E0;border:1.5px solid #D92D20;}
 
   /* El contenedor general no distribuye los grupos en columnas.
      Cada grupo mantiene su propia grilla horizontal de computadoras. */
@@ -110,7 +110,7 @@
     cursor:pointer;display:flex;align-items:center;justify-content:center;
   }
   .seat.selected{background:var(--pine);color:#fff;}
-  .seat.occupied{background:var(--occupied);border-color:var(--occupied);color:#9AA69C;cursor:not-allowed;}
+  .seat.occupied{background:var(--occupied);border-color:var(--occupied);color:#9AA69C;cursor:not-allowed}.seat.technical-down{background:#FDE2E0;border-color:#D92D20;color:#B42318;cursor:not-allowed;text-decoration:line-through}
   .seat-hint{font-size:12.5px;color:var(--ink-soft);margin-top:4px;}
 
   .seatgrid-actions{display:flex;gap:8px;margin-bottom:8px;}
@@ -424,6 +424,14 @@
   .admin-list-row .btn-del{color:var(--brick);}
   .admin-list-row .btn-save{color:var(--pine);}
   .admin-list-empty{padding:10px;font-size:12.5px;color:var(--ink-soft);text-align:center;}
+  .sr-only-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important;}
+  .horario-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .hora-btn{border:1px solid #C9D9E8;background:#fff;color:#18324D;border-radius:10px;padding:9px 8px;cursor:pointer;text-align:left;transition:.12s;font-family:'Inter',sans-serif;}
+  .hora-btn strong{display:block;font-size:12px}.hora-btn span{display:block;font-size:10.5px;color:#667085;margin-top:2px}.hora-btn:hover{border-color:#1187E8;background:#F4FAFF}.hora-btn.active{background:#0B72D1;border-color:#0B72D1;color:#fff}.hora-btn.active span{color:#D9F3FF}.hora-btn.disabled{opacity:.4;cursor:not-allowed;background:#F2F4F7;border-color:#D7E2EF;}
+  .admin-modal-subtitle{margin:-2px 0 16px!important;font-size:12px!important;color:#667085!important;}
+  .admin-help{font-size:11.5px!important;background:#F4F8FC;border:1px solid #D7E7F5;border-radius:9px;padding:9px 10px;margin-bottom:9px!important;}
+  .equipo-admin-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:12.5px}.equipo-admin-row:last-child{border-bottom:0}.equipo-admin-name{flex:1;min-width:0}.equipo-admin-name strong{display:block}.equipo-admin-name small{display:block;color:#667085;margin-top:2px}.equipo-status{font-size:10px;font-weight:800;text-transform:uppercase;border-radius:999px;padding:4px 7px}.equipo-status.ok{background:#ECFDF3;color:#027A48}.equipo-status.bad{background:#FEF3F2;color:#B42318}.equipo-admin-btn{border:1px solid #C9D9E8;background:#fff;border-radius:7px;padding:5px 8px;font-size:11px;font-weight:700;color:#0B4EA2;cursor:pointer}.equipo-admin-btn.danger{color:#B42318;border-color:#F0C7C2}.equipo-admin-btn:disabled{opacity:.5;cursor:not-allowed}
+
 
 .card,.datebox{box-shadow:0 4px 18px rgba(31,42,36,.05)}.timeline-card{box-shadow:0 8px 24px rgba(47,75,60,.14)}button.submit{box-shadow:0 5px 12px rgba(47,75,60,.14);transition:.12s}button.submit:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 7px 16px rgba(47,75,60,.18)}.loading{display:flex;align-items:center;gap:9px}.loading:before{content:"";width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--pine-soft);border-radius:50%;animation:giro .7s linear infinite}@keyframes giro{to{transform:rotate(360deg)}}
 
@@ -545,7 +553,8 @@
 
   <div class="modal-overlay" id="adminListasOverlay">
     <div class="modal-box modal-box-wide">
-      <h3>⚙️ Administrar profesores y cursos</h3>
+      <h3>⚙️ Administración</h3>
+      <p class="admin-modal-subtitle">Profesores, cursos y estado técnico de los equipos.</p>
 
       <div class="admin-list-section">
         <h4>Profesores</h4>
@@ -563,6 +572,12 @@
           <button type="button" id="btnAgregarCurso">Agregar</button>
         </div>
         <div class="admin-list-rows" id="listaCursos"></div>
+      </div>
+
+      <div class="admin-list-section">
+        <h4>Equipos</h4>
+        <p class="admin-help">Podés poner un equipo en <strong>baja técnica</strong>. Si tiene una reserva futura, el sistema intenta reasignarlo automáticamente a otro equipo disponible.</p>
+        <div class="admin-list-rows" id="listaEquipos"></div>
       </div>
 
       <div class="modal-actions">
@@ -681,8 +696,8 @@
             <input type="date" id="fFecha">
           </div>
           <div class="row2">
-            <div class="field"><label for="fRetiro">Retiro</label><select id="fRetiro"></select></div>
-            <div class="field"><label for="fDevol">Devolución</label><select id="fDevol"></select></div>
+            <div class="field horario-field"><label>Inicio de la reserva</label><div id="horarioRetiroBtns" class="horario-buttons" aria-label="Seleccionar hora de inicio"></div><select id="fRetiro" class="sr-only-select" aria-hidden="true"></select></div>
+            <div class="field horario-field"><label>Fin de la reserva</label><div id="horarioDevolBtns" class="horario-buttons" aria-label="Seleccionar hora de finalización"></div><select id="fDevol" class="sr-only-select" aria-hidden="true"></select></div>
           </div>
           <div id="formFechaEstado" class="availability-status" aria-live="polite">✓ Elegí una fecha para consultar la disponibilidad.</div>
 
@@ -691,7 +706,7 @@
           <div class="chip-row" id="grupoChips"></div>
           <div id="plataformaArea" style="display:none;"></div>
           <div id="seatArea" style="display:none;">
-            <div class="seat-legend"><span><span class="swatch avail"></span>Libre</span><span><span class="swatch sel"></span>Elegida</span><span><span class="swatch occ"></span>Ocupada</span></div>
+            <div class="seat-legend"><span><span class="swatch avail"></span>Libre</span><span><span class="swatch sel"></span>Elegida</span><span><span class="swatch occ"></span>Ocupada</span><span><span class="swatch tech"></span>Baja técnica</span></div>
             <div class="seatgrid-actions"><button type="button" class="mini-btn" id="btnSelAll">Seleccionar todas</button><button type="button" class="mini-btn" id="btnSelNone">Deseleccionar todas</button></div>
             <div class="seatgrid" id="seatGrid"></div><div class="seat-hint" id="seatHint"></div>
           </div>
@@ -741,7 +756,32 @@
 </div>
 
 <script>
-const SLOTS = ['7:30','8:10','9:00','9:40','10:30','11:10','11:40','12:20'];
+const HORARIOS = [
+  { n:1, etiqueta:'Primera hora', inicio:'7:30', fin:'8:10' },
+  { n:2, etiqueta:'Segunda hora', inicio:'8:10', fin:'8:50' },
+  { n:3, etiqueta:'Tercera hora', inicio:'9:05', fin:'9:40' },
+  { n:4, etiqueta:'Cuarta hora', inicio:'9:40', fin:'10:20' },
+  { n:5, etiqueta:'Quinta hora', inicio:'10:30', fin:'11:10' },
+  { n:6, etiqueta:'Sexta hora', inicio:'11:10', fin:'11:50' },
+  { n:7, etiqueta:'Séptima hora', inicio:'11:50', fin:'12:15' }
+];
+const SLOTS = ['7:30','8:10','8:50','9:05','9:40','10:20','10:30','11:10','11:50','12:15'];
+const HORARIO_SLOT_MAP = HORARIOS.map((h,i)=>({inicioIdx:i===0?0:[0,1,3,4,6,7,8][i], finIdx:[1,2,4,5,7,8,9][i]}));
+const HORA_MIN_BASE=450, HORA_MIN_FIN=735;
+function horaAMinutos(h){ const m=String(h||'').match(/^(\d{1,2}):(\d{2})$/); return m?Number(m[1])*60+Number(m[2]):null; }
+function horaInicioReserva(r){ return r.retiroHora || SLOTS[r.retiroIdx] || ''; }
+function horaFinReserva(r){ return r.devolHora || SLOTS[r.devolIdx] || ''; }
+function rangoReservaMinutos(r){ return {inicio:horaAMinutos(horaInicioReserva(r)),fin:horaAMinutos(horaFinReserva(r))}; }
+function rangoFormularioMinutos(retiroIdx,devolIdx){ return {inicio:horaAMinutos(SLOTS[retiroIdx]),fin:horaAMinutos(SLOTS[devolIdx])}; }
+function porcentajeHora(min){ return Math.max(0,Math.min(100,((min-HORA_MIN_BASE)/(HORA_MIN_FIN-HORA_MIN_BASE))*100)); }
+function indiceHorarioMasCercano(hora, tipo){
+  const objetivo=horaAMinutos(hora); if(objetivo==null)return tipo==='inicio'?0:1;
+  let mejor=null,dist=Infinity;
+  HORARIO_SLOT_MAP.forEach((m,i)=>{ const idx=tipo==='inicio'?m.inicioIdx:m.finIdx; const d=Math.abs(horaAMinutos(SLOTS[idx])-objetivo); if(d<dist){dist=d;mejor=idx;} });
+  return mejor;
+}
+
+
 
 // grupos de netbooks: se eligen unidades individuales, tipo mapa de asientos
 const GRUPOS_NETBOOKS = [
@@ -758,7 +798,17 @@ const EXTRAS = [
 ];
 
 const RECURSOS = [...GRUPOS_NETBOOKS, ...EXTRAS]; // para el timeline
-
+let equiposEstado = new Map(); // clave grupo|unidad -> {activo,motivo,nombre}
+function claveEquipo(grupo, unidad){ return String(grupo)+'|'+String(unidad); }
+function equipoActivo(grupo, unidad){ const e=equiposEstado.get(claveEquipo(grupo,unidad)); return e ? e.activo !== false : true; }
+function equiposFueraServicio(fecha, grupoId){
+  const set=new Set();
+  for(let n=1;n<=((grupoById(grupoId)||{}).total||0);n++) if(!equipoActivo(grupoId,n)) set.add(n);
+  return set;
+}
+function aplicarEquiposEstado(lista){
+  equiposEstado=new Map((lista||[]).map(e=>[claveEquipo(e.grupo,e.unidad),e]));
+}
 function grupoById(id){ return RECURSOS.find(g => g.id === id); }
 function todayStr(){
   const d = new Date();
@@ -1047,6 +1097,7 @@ function abrirModalAdminListas(){
   editandoCursoId = null;
   renderAdminListas();
   document.getElementById('adminListasOverlay').classList.add('show');
+  cargarEquiposAdmin();
 }
 function cerrarModalAdminListas(){
   document.getElementById('adminListasOverlay').classList.remove('show');
@@ -1145,13 +1196,59 @@ async function onAgregarCurso(){
   renderSelectsFormulario();
 }
 
+/* ---------- administración de equipos ---------- */
+async function cargarEquiposAdmin(){
+  if(!adminMode) return;
+  try{
+    const data=await fetch(`${APPS_SCRIPT_URL}?action=listEquipos&password=${encodeURIComponent(adminPassword)}`).then(r=>r.json());
+    if(data.error) throw new Error(data.error);
+    aplicarEquiposEstado(data.equipos||[]);
+    renderListaEquipos(data.equipos||[]);
+    renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+  }catch(e){
+    const el=document.getElementById('listaEquipos'); if(el) el.innerHTML='<div class="admin-list-empty">No se pudo cargar el estado de los equipos.</div>';
+  }
+}
+function renderListaEquipos(lista){
+  const cont=document.getElementById('listaEquipos'); if(!cont)return;
+  if(!lista.length){cont.innerHTML='<div class="admin-list-empty">No hay equipos configurados.</div>';return;}
+  const grupos={}; lista.forEach(e=>{(grupos[e.grupo] ||= []).push(e);});
+  cont.innerHTML=Object.entries(grupos).map(([grupo,items])=>`
+    <div style="padding:9px 10px 5px;font-weight:800;color:#0B4EA2;font-size:12px;background:#F7FAFD">${grupoById(grupo)?.nombre||grupo}</div>
+    ${items.map(e=>`<div class="equipo-admin-row">
+      <div class="equipo-admin-name"><strong>#${e.unidad}</strong><small>${e.motivo?escapeHtml(e.motivo):'Disponible para reservas'}</small></div>
+      <span class="equipo-status ${e.activo?'ok':'bad'}">${e.activo?'Activo':'Baja técnica'}</span>
+      <button type="button" class="equipo-admin-btn ${e.activo?'danger':''}" data-equipo-action="${e.activo?'baja':'alta'}" data-grupo="${e.grupo}" data-unidad="${e.unidad}">${e.activo?'Dar de baja':'Dar de alta'}</button>
+    </div>`).join('')}`).join('');
+  cont.querySelectorAll('[data-equipo-action]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const grupo=btn.dataset.grupo, unidad=Number(btn.dataset.unidad), alta=btn.dataset.equipoAction==='alta';
+    let motivo='';
+    if(!alta){ motivo=prompt(`Motivo de la baja técnica del equipo #${unidad}:`,'Falla técnica')||''; if(!motivo.trim())return; }
+    btn.disabled=true; btn.textContent='Guardando…';
+    try{
+      const action=alta?'activarEquipo':'desactivarEquipo';
+      const url=`${APPS_SCRIPT_URL}?action=${action}&grupo=${encodeURIComponent(grupo)}&unidad=${unidad}&motivo=${encodeURIComponent(motivo)}&password=${encodeURIComponent(adminPassword)}`;
+      const data=await fetch(url).then(r=>r.json());
+      if(data.error) throw new Error(data.error);
+      aplicarEquiposEstado(data.equipos||[]);
+      renderListaEquipos(data.equipos||[]);
+      renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid();
+      if(data.reasignadas?.length){ alert(`Equipo puesto en baja. Se reasignaron ${data.reasignadas.length} reserva(s) automáticamente.`); }
+      if(data.sinReasignar?.length){ alert(`Atención: ${data.sinReasignar.length} reserva(s) no tenían otro equipo disponible y requieren revisión.`); }
+      // refrescar agenda por si una reserva fue reasignada
+      const fecha=document.getElementById('dateInput')?.value; if(fecha){ await cargarReservasFecha(fecha,true); renderAll(); }
+    }catch(e){ alert(e.message||'No se pudo actualizar el equipo.'); btn.disabled=false; btn.textContent=alta?'Dar de alta':'Dar de baja'; }
+  }));
+}
+function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+
 /* ---------- modo administrador: UI ---------- */
 function renderAdminControls(){
   const cont = document.getElementById('adminControls');
   if(adminMode){
     cont.innerHTML = `
       <div class="admin-badge"><span class="dot"></span>Modo administrador activo</div>
-      <button type="button" class="admin-btn" id="btnAbrirListas">⚙️ Administrar profesores y cursos</button>
+      <button type="button" class="admin-btn" id="btnAbrirListas">⚙️ Administración</button>
       <button type="button" class="admin-btn" id="btnAbrirInformes">📊 Informes</button>
       <button type="button" class="admin-exit-btn" id="btnSalirAdmin">Salir del modo administrador</button>
     `;
@@ -1228,16 +1325,17 @@ function rangesOverlap(aStart,aEnd,bStart,bEnd){ return aStart < bEnd && bStart 
 function unidadesOcupadas(fecha, grupoId, retiroIdx, devolIdx, excluirId){
   const set = new Set();
   const delDia = reservasPorFecha.get(fecha) || (reservas.filter(r => r.fecha === fecha));
+  const rangoNuevo=rangoFormularioMinutos(retiroIdx,devolIdx);
   delDia
     .filter(r => r.id !== excluirId
       && !ESTADOS_QUE_LIBERAN_EQUIPO.includes(estadoDeReserva(r))
-      && rangesOverlap(retiroIdx, devolIdx, r.retiroIdx, r.devolIdx))
+      && rangesOverlap(rangoNuevo.inicio,rangoNuevo.fin,rangoReservaMinutos(r).inicio,rangoReservaMinutos(r).fin))
     .forEach(r => r.items.filter(it => it.grupo === grupoId).forEach(it => set.add(it.unidad)));
   return set;
 }
 
-function primerUnidadLibre(total, ocupadas){
-  for(let n=1; n<=total; n++) if(!ocupadas.has(n)) return n;
+function primerUnidadLibre(grupoId,total, ocupadas){
+  for(let n=1; n<=total; n++) if(!ocupadas.has(n) && equipoActivo(grupoId,n)) return n;
   return null;
 }
 
@@ -1250,18 +1348,37 @@ function getFormContext(){
 }
 
 /* ---------- selects de horario ---------- */
+function horarioBotonHtml(h, tipo, activo, disabled){
+  return `<button type="button" class="hora-btn ${activo?'active':''} ${disabled?'disabled':''}" data-horario-tipo="${tipo}" data-inicio-idx="${h.inicioIdx}" data-fin-idx="${h.finIdx}" ${disabled?'disabled':''}><strong>${h.n}ª hora</strong><span>${h.inicio} → ${h.fin}</span></button>`;
+}
 function fillHorarioSelects(){
-  const fRetiro = document.getElementById('fRetiro');
-  fRetiro.innerHTML = SLOTS.slice(0, SLOTS.length-1).map((s,i) => `<option value="${i}">${s}</option>`).join('');
-  updateDevolOptions();
+  const fRetiro=document.getElementById('fRetiro');
+  const fDevol=document.getElementById('fDevol');
+  fRetiro.innerHTML=HORARIOS.map((h,i)=>`<option value="${HORARIO_SLOT_MAP[i].inicioIdx}">${h.inicio}</option>`).join('');
+  fDevol.innerHTML=HORARIOS.map((h,i)=>`<option value="${HORARIO_SLOT_MAP[i].finIdx}">${h.fin}</option>`).join('');
+  fRetiro.value='0'; fDevol.value='1';
+  renderHorarioButtons();
 }
 function updateDevolOptions(){
-  const retiroIdx = parseInt(document.getElementById('fRetiro').value,10);
-  const fDevol = document.getElementById('fDevol');
-  const prev = fDevol.value;
-  fDevol.innerHTML = SLOTS.map((s,i)=>({s,i})).filter(o=>o.i>retiroIdx)
-    .map(o => `<option value="${o.i}">${o.s}</option>`).join('');
-  if(prev && parseInt(prev,10) > retiroIdx) fDevol.value = prev;
+  renderHorarioButtons();
+}
+function renderHorarioButtons(){
+  const inicioIdx=parseInt(document.getElementById('fRetiro').value,10);
+  const finIdx=parseInt(document.getElementById('fDevol').value,10);
+  const r=document.getElementById('horarioRetiroBtns'), d=document.getElementById('horarioDevolBtns');
+  if(!r||!d)return;
+  r.innerHTML=HORARIOS.map((h,i)=>horarioBotonHtml({...h,inicioIdx:HORARIO_SLOT_MAP[i].inicioIdx,finIdx:HORARIO_SLOT_MAP[i].finIdx},'inicio',HORARIO_SLOT_MAP[i].inicioIdx===inicioIdx,false)).join('');
+  d.innerHTML=HORARIOS.map((h,i)=>horarioBotonHtml({...h,inicioIdx:HORARIO_SLOT_MAP[i].inicioIdx,finIdx:HORARIO_SLOT_MAP[i].finIdx},'fin',HORARIO_SLOT_MAP[i].finIdx===finIdx,HORARIO_SLOT_MAP[i].finIdx<=inicioIdx)).join('');
+  r.querySelectorAll('[data-horario-tipo="inicio"]').forEach(btn=>btn.addEventListener('click',()=>{
+    const idx=Number(btn.dataset.inicioIdx); document.getElementById('fRetiro').value=String(idx);
+    const actualFin=Number(document.getElementById('fDevol').value); if(!(actualFin>idx)){
+      const siguiente=HORARIO_SLOT_MAP.find(x=>x.finIdx>idx); document.getElementById('fDevol').value=String(siguiente?siguiente.finIdx:SLOTS.length-1);
+    }
+    renderHorarioButtons(); document.getElementById('fRetiro').dispatchEvent(new Event('change'));
+  }));
+  d.querySelectorAll('[data-horario-tipo="fin"]:not(:disabled)').forEach(btn=>btn.addEventListener('click',()=>{
+    document.getElementById('fDevol').value=String(btn.dataset.finIdx); renderHorarioButtons(); document.getElementById('fDevol').dispatchEvent(new Event('change'));
+  }));
 }
 
 /* ---------- chips de grupo de netbooks ---------- */
@@ -1270,7 +1387,8 @@ function renderGrupoChips(){
   const ctx = getFormContext();
   cont.innerHTML = GRUPOS_NETBOOKS.map(g => {
     const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
-    const libres = g.total - ocupadas.size;
+    const fuera = equiposFueraServicio(ctx.fecha, g.id);
+    const libres = Math.max(0, g.total - ocupadas.size - fuera.size);
     const activo = gruposSeleccionados.has(g.id) ? 'active' : '';
     return `<div class="chip ${activo}" data-grupo="${g.id}">${g.nombre} <span style="opacity:.7">(${libres}/${g.total} libres)</span></div>`;
   }).join('') + `<div class="chip ${gruposSeleccionados.size===0?'active':''}" data-grupo="">No uso netbooks</div>`;
@@ -1326,7 +1444,8 @@ function renderSeccionPlataforma(){
     const ctx = getFormContext();
     const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
     const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
-    const libresSueltas = sueltas.total - ocupadasSueltas.size;
+    const fueraSueltas = equiposFueraServicio(ctx.fecha, sueltas.id);
+    const libresSueltas = Math.max(0, sueltas.total - ocupadasSueltas.size - fueraSueltas.size);
     if(libresSueltas > 0){
       nudgeHtml = `<div class="uso-nudge show">Para otros usos hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario.</div>`;
     }
@@ -1366,13 +1485,14 @@ function renderSeatGrid(){
   GRUPOS_NETBOOKS.forEach(g=>{
     if(!gruposSeleccionados.has(g.id)) return;
     const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha,g.id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId) : new Set();
-    unidadesSeleccionadas[g.id].forEach(n=>{ if(ocupadas.has(n)) unidadesSeleccionadas[g.id].delete(n); });
-    const libres = Math.max(0,g.total-ocupadas.size);
+    unidadesSeleccionadas[g.id].forEach(n=>{ if(ocupadas.has(n) || !equipoActivo(g.id,n)) unidadesSeleccionadas[g.id].delete(n); });
+    const fuera = equiposFueraServicio(ctx.fecha, g.id);
+    const libres = Math.max(0,g.total-ocupadas.size-fuera.size);
     if(!modoSeleccionManual[g.id]){
       const qty=Math.min(Math.max(0,cantidadesSeleccionadas[g.id]||0),libres);
       cantidadesSeleccionadas[g.id]=qty;
       const disponibles=[];
-      for(let n=1;n<=g.total;n++) if(!ocupadas.has(n)) disponibles.push(n);
+      for(let n=1;n<=g.total;n++) if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n);
       unidadesSeleccionadas[g.id]=new Set(disponibles.slice(0,qty));
     } else {
       cantidadesSeleccionadas[g.id]=unidadesSeleccionadas[g.id].size;
@@ -1383,11 +1503,12 @@ function renderSeatGrid(){
     const g=grupoById(groupId);
     const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,g.id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
     const seleccion=unidadesSeleccionadas[g.id];
-    const libres=Math.max(0,g.total-ocupadas.size);
+    const fuera=equiposFueraServicio(ctx.fecha,g.id);
+    const libres=Math.max(0,g.total-ocupadas.size-fuera.size);
     const qty=Math.min(cantidadesSeleccionadas[g.id]||0,libres);
     const seats=Array.from({length:g.total},(_,i)=>i+1).map(n=>{
-      const occ=ocupadas.has(n), sel=seleccion.has(n);
-      return `<div class="seat ${occ?'occupied':(sel?'selected':'')}" data-group="${g.id}" data-n="${n}">${n}</div>`;
+      const occ=ocupadas.has(n), baja=fuera.has(n), sel=seleccion.has(n);
+      return `<div class="seat ${occ?'occupied':(baja?'technical-down':(sel?'selected':''))}" data-group="${g.id}" data-n="${n}" title="${baja?'Equipo fuera de servicio':(occ?'Equipo ocupado':'Equipo disponible')}">${n}</div>`;
     }).join('');
     return `<div class="seat-group-block">
       <div class="seat-group-title">${g.nombre}</div>
@@ -1409,7 +1530,8 @@ function renderSeatGrid(){
   grid.querySelectorAll('[data-qty-action]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.group; const g=grupoById(id);
     const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
-    const libres=Math.max(0,g.total-ocupadas.size);
+    const fuera=equiposFueraServicio(ctx.fecha,g.id);
+    const libres=Math.max(0,g.total-ocupadas.size-fuera.size);
     const delta=btn.dataset.qtyAction==='plus'?1:-1;
     cantidadesSeleccionadas[id]=Math.max(0,Math.min(libres,(cantidadesSeleccionadas[id]||0)+delta));
     modoSeleccionManual[id]=false;
@@ -1421,13 +1543,13 @@ function renderSeatGrid(){
     if(!modoSeleccionManual[id]){
       const g=grupoById(id);
       const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
-      const disponibles=[]; for(let n=1;n<=g.total;n++) if(!ocupadas.has(n)) disponibles.push(n);
+      const disponibles=[]; for(let n=1;n<=g.total;n++) if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n);
       const qty=Math.min(cantidadesSeleccionadas[id]||0,disponibles.length);
       unidadesSeleccionadas[id]=new Set(disponibles.slice(0,qty));
     }
     renderSeatGrid();
   }));
-  grid.querySelectorAll('.seat:not(.occupied)').forEach(el=>el.addEventListener('click',()=>{
+  grid.querySelectorAll('.seat:not(.occupied):not(.technical-down)').forEach(el=>el.addEventListener('click',()=>{
     const id=el.dataset.group,n=parseInt(el.dataset.n,10);
     if(!modoSeleccionManual[id]) return;
     if(unidadesSeleccionadas[id].has(n)) unidadesSeleccionadas[id].delete(n); else unidadesSeleccionadas[id].add(n);
@@ -1439,7 +1561,7 @@ function renderSeatGrid(){
   hint.textContent=total===0?'Elegí cuántas netbooks vas a utilizar. La asignación se hace automáticamente y podés elegir equipos específicos si lo necesitás.':`Total seleccionado: ${total} netbook${total===1?'':'s'}. Cada equipo queda registrado individualmente.`;
 
   document.getElementById('btnSelAll').onclick=()=>{
-    gruposSeleccionados.forEach(id=>{ modoSeleccionManual[id]=false; const g=grupoById(id); const occ=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set(); cantidadesSeleccionadas[id]=Math.max(0,g.total-occ.size); });
+    gruposSeleccionados.forEach(id=>{ modoSeleccionManual[id]=false; const g=grupoById(id); const occ=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set(); const fuera=equiposFueraServicio(ctx.fecha,id); cantidadesSeleccionadas[id]=Math.max(0,g.total-occ.size-fuera.size); });
     renderSeatGrid();
   };
   document.getElementById('btnSelNone').onclick=()=>{ gruposSeleccionados.forEach(id=>{ cantidadesSeleccionadas[id]=0; unidadesSeleccionadas[id].clear(); }); renderSeatGrid(); };
@@ -1450,7 +1572,8 @@ function renderExtrasGrid(){
   const ctx = getFormContext();
   cont.innerHTML = EXTRAS.map(ex => {
     const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, ex.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
-    const libres = ex.total - ocupadas.size;
+    const fuera = equiposFueraServicio(ctx.fecha, ex.id);
+    const libres = Math.max(0, ex.total - ocupadas.size - fuera.size);
     const selected = extrasSeleccionados.has(ex.id);
     const disabled = libres <= 0 && !selected;
     const detalle = ex.detalle ? ` <small>${ex.detalle}</small>` : '';
@@ -1475,6 +1598,8 @@ async function onReservar(){
   const fecha = document.getElementById('fFecha').value;
   const retiroIdx = parseInt(document.getElementById('fRetiro').value,10);
   const devolIdx = parseInt(document.getElementById('fDevol').value,10);
+  const retiroHora = SLOTS[retiroIdx];
+  const devolHora = SLOTS[devolIdx];
   const nombre = document.getElementById('fNombre').value.trim();
   const materia = document.getElementById('fMateria').value.trim();
   const alumnoNombreInput = document.getElementById('fNombreAlumno');
@@ -1546,7 +1671,7 @@ async function onReservar(){
 
     EXTRAS.filter(ex => extrasSeleccionados.has(ex.id)).forEach(ex => {
       const ocupadas = unidadesOcupadas(fecha, ex.id, retiroIdx, devolIdx, reservaEditandoId);
-      const libre = primerUnidadLibre(ex.total, ocupadas);
+      const libre = primerUnidadLibre(ex.id, ex.total, ocupadas);
       if(libre === null) conflictos.push(ex.nombre);
       else items.push({ grupo: ex.id, unidad: libre });
     });
@@ -1560,7 +1685,7 @@ async function onReservar(){
 
     const plataformaElegida = totalNetbooksSeleccionadas > 0 ? plataformaSeleccionada : null;
     const reservaBase = {
-      fecha, retiroIdx, devolIdx, nombre, materia, nombreAlumno: nombreAlumnoActual,
+      fecha, retiroIdx, devolIdx, retiroHora, devolHora, nombre, materia, nombreAlumno: nombreAlumnoActual,
       items, usoCarrito: plataformaElegida
     };
 
@@ -1625,12 +1750,13 @@ function renderLanes(fecha){
     const filas = delDia.filter(r => r.items.some(it => it.grupo === rec.id));
     if(filas.length === 0) return '';
     const blocks = filas.map(r => {
-      const left = (r.retiroIdx/total)*100;
-      const width = ((r.devolIdx - r.retiroIdx)/total)*100;
+      const rango=rangoReservaMinutos(r);
+      const left = porcentajeHora(rango.inicio);
+      const width = Math.max(0,porcentajeHora(rango.fin)-left);
       const cant = r.items.filter(it => it.grupo === rec.id).length;
       const label = cant > 1 ? `${r.nombre} ×${cant}` : r.nombre;
       const color = colorProfesor(solicitanteVisible(r));
-      return `<div class="block" style="left:${left}%;width:${width}%;background:${color};" title="${rec.nombre} · ${r.nombre} (${r.materia}) ${SLOTS[r.retiroIdx]}–${SLOTS[r.devolIdx]}">${label}</div>`;
+      return `<div class="block" style="left:${left}%;width:${width}%;background:${color};" title="${rec.nombre} · ${r.nombre} (${r.materia}) ${horaInicioReserva(r)}–${horaFinReserva(r)}">${label}</div>`;
     }).join('');
     return `<div class="lane"><span class="lane-label">${rec.nombre}</span>${blocks}</div>`;
   }).join('');
@@ -1650,7 +1776,7 @@ function abrirModalConfirmarCancelar(id){
       <dt>Profesor</dt><dd>${r.nombre}</dd>
       <dt>Materia</dt><dd>${r.materia}</dd>
       <dt>Fecha</dt><dd>${fmtFecha(r.fecha)}</dd>
-      <dt>Horario</dt><dd>${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</dd>
+      <dt>Horario</dt><dd>${horaInicioReserva(r)} → ${horaFinReserva(r)}</dd>
       <dt>Equipos reservados</dt><dd>${equipos}</dd>
     </dl>`;
   document.getElementById('confirmCancelOverlay').classList.add('show');
@@ -1724,9 +1850,10 @@ function abrirEdicionReserva(id){
 
   document.getElementById('dateInput').value = r.fecha;
   document.getElementById('fFecha').value = r.fecha;
-  document.getElementById('fRetiro').value = r.retiroIdx;
+  document.getElementById('fRetiro').value = indiceHorarioMasCercano(horaInicioReserva(r),'inicio');
   updateDevolOptions();
-  document.getElementById('fDevol').value = r.devolIdx;
+  document.getElementById('fDevol').value = indiceHorarioMasCercano(horaFinReserva(r),'fin');
+  renderHorarioButtons();
 
   renderSelectsFormulario();
   asegurarOpcionSelect(document.getElementById('fNombre'), r.nombre);
@@ -1757,7 +1884,7 @@ function abrirEdicionReserva(id){
   document.getElementById('btnCancelarEdicion').style.display = 'block';
   const aviso = document.getElementById('modoEdicionAviso');
   aviso.style.display = 'block';
-  aviso.textContent = `Editando la reserva de ${r.nombre} — ${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]} del ${fmtFecha(r.fecha)}.`;
+  aviso.textContent = `Editando la reserva de ${r.nombre} — ${horaInicioReserva(r)} → ${horaFinReserva(r)} del ${fmtFecha(r.fecha)}.`;
 
   renderAll();
   document.getElementById('nuevaView').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1849,7 +1976,7 @@ function marcarDevuelta(id, btn){
 function marcarNoRetirada(id, btn){
   const r = reservas.find(x => x.id === id);
   if(!r) return;
-  if(!confirm(`¿Marcar como "No retirada" la reserva de ${r.nombre} (${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]})? Se liberan sus equipos y deja de verse en el timeline del día.`)) return;
+  if(!confirm(`¿Marcar como "No retirada" la reserva de ${r.nombre} (${horaInicioReserva(r)} → ${horaFinReserva(r)})? Se liberan sus equipos y deja de verse en el timeline del día.`)) return;
   cambiarEstadoReserva(id, 'No retirada', 'Marcada como No retirada', btn);
 }
 
@@ -1908,7 +2035,7 @@ function estaEnCurso(r){
   if(r.fecha !== todayStr()) return false;
   const ahora = new Date();
   const minAhora = ahora.getHours() * 60 + ahora.getMinutes();
-  return minAhora >= horaAMinutos(SLOTS[r.retiroIdx]) && minAhora < horaAMinutos(SLOTS[r.devolIdx]);
+  return minAhora >= horaAMinutos(horaInicioReserva(r)) && minAhora < horaAMinutos(horaFinReserva(r));
 }
 
 /* ---------- texto normalizado para búsquedas (ignora may/min y acentos) ---------- */
@@ -1964,7 +2091,7 @@ function renderAgenda(fecha){
       <div class="agenda-item ${enCurso ? 'en-curso' : ''}" data-reserva-id="${r.id}" style="border-left:5px solid ${color};">
         <div class="meta">
           <span class="prof-dot" style="background:${color};"></span><b>${solicitanteVisible(r)}</b> — ${r.materia}${badge}
-          <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
+          <div class="horario">${horaInicioReserva(r)} → ${horaFinReserva(r)}</div>
           <div class="items">${tags}${usoTag}${estadoTag}</div>
         </div>
         ${acciones}
@@ -1984,7 +2111,7 @@ function crearTextoBusqueda(r){
   const partes = [
     r.nombre, r.nombreAlumno, solicitanteVisible(r), r.materia,
     r.fecha, fmtFecha(r.fecha),
-    SLOTS[r.retiroIdx], SLOTS[r.devolIdx],
+    horaInicioReserva(r), horaFinReserva(r),
     resumenItems(r.items).join(' '),
   ];
   const etiquetaUso = etiquetaPlataforma(r.usoCarrito);
@@ -2005,7 +2132,7 @@ function renderTarjetaResultado(r){
       <div class="meta">
         <div class="resultado-fecha">${fmtFecha(r.fecha)}</div>
         <span class="prof-dot" style="background:${color};"></span><b>${solicitanteVisible(r)}</b> — ${r.materia}
-        <div class="horario">${SLOTS[r.retiroIdx]} → ${SLOTS[r.devolIdx]}</div>
+        <div class="horario">${horaInicioReserva(r)} → ${horaFinReserva(r)}</div>
         <div class="items">${tags}${usoTag}</div>
       </div>
     </div>`;
@@ -2398,7 +2525,7 @@ function exportarInformeCSV(){
   informeActual.filasExport.forEach(r=>{
     rows.push([
       fmtFecha(r.fecha), r.profesor, r.alumno, r.curso, r.plataforma,
-      r.equipos, SLOTS[r.retiro] || '', SLOTS[r.devolucion] || '', r.estado
+      r.equipos, r.retiroHora || SLOTS[r.retiro] || '', r.devolucionHora || SLOTS[r.devolucion] || '', r.estado
     ]);
   });
   const csv='\uFEFF'+rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';')).join('\r\n');
@@ -2499,6 +2626,7 @@ async function init(){
       reservas = boot.reservas || [];
       profesoresList = boot.profesores || [];
       cursosList = boot.cursos || [];
+      aplicarEquiposEstado(boot.equipos || []);
     }catch(e){
       document.getElementById('agendaList').innerHTML =
         '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
