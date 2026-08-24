@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Escuela 4-144 · 12 de Agosto · Reservas Edutec</title>
-<!-- v8.2: la disponibilidad definitiva se valida en Apps Script con las horas reales de cada bloque. -->
 <link rel="apple-touch-icon" 
 <meta name="theme-color" content="#07111F">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -655,13 +654,13 @@
   </div>
 
   <nav class="main-nav" aria-label="Navegación principal">
-    <button type="button" class="nav-btn active" data-view="agendaView" aria-label="Agenda: ver reservas del día"><span class="nav-icon">▦</span><span><b>Agenda</b><small>Ver reservas del día</small></span></button>
-    <button type="button" class="nav-btn" data-view="nuevaView" aria-label="Nueva reserva: reservar equipamiento"><span class="nav-icon">＋</span><span><b>Nueva reserva</b><small>Reservar equipamiento</small></span></button>
+    <button type="button" class="nav-btn active" data-view="nuevaView" aria-label="Nueva reserva: reservar equipamiento"><span class="nav-icon">＋</span><span><b>Nueva reserva</b><small>Reservar equipamiento</small></span></button>
+    <button type="button" class="nav-btn" data-view="agendaView" aria-label="Agenda: ver reservas del día"><span class="nav-icon">▦</span><span><b>Agenda</b><small>Ver reservas del día</small></span></button>
     <button type="button" class="nav-btn" data-view="buscarView" aria-label="Buscar reserva: buscar en todas las fechas"><span class="nav-icon">⌕</span><span><b>Buscar reserva</b><small>Buscar en todas las fechas</small></span></button>
   </nav>
 
   <main>
-    <section id="agendaView" class="app-view active-view">
+    <section id="agendaView" class="app-view" style="display:none;">
       <div class="view-heading">
         <div>
           <p class="view-kicker">AGENDA</p>
@@ -673,6 +672,7 @@
           <div class="date-controls">
             <button type="button" class="date-arrow" id="btnFechaAnterior" aria-label="Día anterior">‹</button>
             <input type="date" id="dateInput">
+            <button type="button" class="mini-btn" id="btnConsultarAgenda">🔎 Consultar</button>
             <button type="button" class="mini-btn" id="btnHoy">Hoy</button>
             <button type="button" class="date-arrow" id="btnFechaSiguiente" aria-label="Día siguiente">›</button>
           </div>
@@ -700,12 +700,12 @@
       </div>
     </section>
 
-    <section id="nuevaView" class="app-view" style="display:none;">
+    <section id="nuevaView" class="app-view active-view">
       <div class="view-heading">
         <div>
           <p class="view-kicker">NUEVA RESERVA</p>
           <h2>Reservá equipos</h2>
-          <p>Elegí primero la fecha y el horario. La disponibilidad se actualiza para ese día.</p>
+          <p>Elegí primero la fecha y el horario. La disponibilidad se consulta solamente cuando la necesitás.</p>
         </div>
         <div class="new-view-note">💡 Podés reservar equipos de una fecha distinta a la que estás mirando en la agenda.</div>
       </div>
@@ -715,7 +715,10 @@
           <div class="form-step"><span>1</span><div><strong>Fecha y horario</strong><small>La disponibilidad se consulta según estos datos.</small></div></div>
           <div class="field">
             <label for="fFecha">Fecha de reserva</label>
-            <input type="date" id="fFecha">
+            <div class="date-controls reservation-date-controls">
+              <input type="date" id="fFecha">
+              <button type="button" class="mini-btn" id="btnConsultarDisponibilidad">🔎 Consultar</button>
+            </div>
           </div>
           <div class="field horario-field">
             <label>Horario de la reserva</label>
@@ -959,8 +962,15 @@ let editandoCursoId = null;
 function scriptConfigurado(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('http') === 0; }
 
 const reservasPromises = new Map();
-const reservasCacheTTL = 60000;
+// Una consulta por fecha se reutiliza durante 5 minutos. Las operaciones que
+// modifican reservas invalidan explícitamente la fecha afectada y al guardar
+// siempre se fuerza una validación fresca en el servidor.
+const reservasCacheTTL = 5 * 60 * 1000;
 const reservasCacheTimestamps = new Map();
+function fechaDisponibilidadConsultada(fecha){
+  const dia=String(fecha||'').substring(0,10);
+  return !!dia && reservasPorFecha.has(dia);
+}
 
 async function cargarReservasFecha(fecha, forzar=false){
   if(!scriptConfigurado()) return [];
@@ -1439,16 +1449,19 @@ function renderHorarioButtons(){
 function renderGrupoChips(){
   const cont = document.getElementById('grupoChips');
   const ctx = getFormContext();
+  const consultada = fechaDisponibilidadConsultada(ctx.fecha);
   cont.innerHTML = GRUPOS_NETBOOKS.map(g => {
-    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
-    const fuera = equiposFueraServicio(ctx.fecha, g.id);
-    const libres = Math.max(0, g.total - ocupadas.size - fuera.size);
+    const ocupadas = consultada ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
+    const fuera = consultada ? equiposFueraServicio(ctx.fecha, g.id) : new Set();
+    const libres = consultada ? Math.max(0, g.total - ocupadas.size - fuera.size) : 0;
     const activo = gruposSeleccionados.has(g.id) ? 'active' : '';
-    return `<div class="chip ${activo}" data-grupo="${g.id}">${g.nombre} <span style="opacity:.7">(${libres}/${g.total} libres)</span></div>`;
-  }).join('') + `<div class="chip ${gruposSeleccionados.size===0?'active':''}" data-grupo="">No uso netbooks</div>`;
+    const disabled = !consultada ? 'disabled' : '';
+    return `<div class="chip ${activo} ${disabled}" data-grupo="${g.id}" title="${consultada?'':'Primero consultá la disponibilidad de la fecha'}">${g.nombre} <span style="opacity:.7">${consultada?`(${libres}/${g.total} libres)`:'(consultá fecha)'}</span></div>`;
+  }).join('') + `<div class="chip ${gruposSeleccionados.size===0?'active':''} ${!consultada?'disabled':''}" data-grupo="">No uso netbooks</div>`;
 
   cont.querySelectorAll('.chip').forEach(el => {
     el.addEventListener('click', () => {
+      if(!fechaDisponibilidadConsultada(ctx.fecha)) return;
       const g = el.getAttribute('data-grupo');
       if(g === ''){
         gruposSeleccionados.clear();
@@ -1628,16 +1641,17 @@ function renderSeatGrid(){
 function renderExtrasGrid(){
   const cont = document.getElementById('extrasGrid');
   const ctx = getFormContext();
+  const consultada = fechaDisponibilidadConsultada(ctx.fecha);
   cont.innerHTML = EXTRAS.map(ex => {
-    const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha, ex.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
-    const fuera = equiposFueraServicio(ctx.fecha, ex.id);
-    const libres = Math.max(0, ex.total - ocupadas.size - fuera.size);
+    const ocupadas = consultada ? unidadesOcupadas(ctx.fecha, ex.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
+    const fuera = consultada ? equiposFueraServicio(ctx.fecha, ex.id) : new Set();
+    const libres = consultada ? Math.max(0, ex.total - ocupadas.size - fuera.size) : 0;
     const selected = extrasSeleccionados.has(ex.id);
-    const disabled = libres <= 0 && !selected;
+    const disabled = !consultada || (libres <= 0 && !selected);
     const detalle = ex.detalle ? ` <small>${ex.detalle}</small>` : '';
     return `<div class="extra-chip ${selected?'selected':''} ${disabled?'disabled':''}" data-extra="${ex.id}">
       <span>${ex.nombre}${detalle}</span>
-      <span class="plus">${selected ? '✓' : (disabled ? '—' : '+')}</span>
+      <span class="plus">${selected ? '✓' : (!consultada ? '🔎' : (disabled ? '—' : '+'))}</span>
     </div>`;
   }).join('');
 
@@ -1674,6 +1688,12 @@ async function onReservar(){
   if(!fecha || !nombre || !materia){
     msg.textContent = 'Completá fecha, nombre y materia/curso.';
     msg.className = 'msg show error';
+    return;
+  }
+  if(!fechaDisponibilidadConsultada(fecha)){
+    msg.textContent = 'Primero consultá la disponibilidad de la fecha elegida.';
+    msg.className = 'msg show error';
+    document.getElementById('btnConsultarDisponibilidad')?.focus();
     return;
   }
   if(nombre === 'Alumno' && !nombreAlumnoActual){
@@ -2647,7 +2667,7 @@ function renderReservationSummary(){
 
 /* ---------- render general ---------- */
 function renderAll(){
-  const activeView = document.querySelector('.app-view.active-view')?.id || 'agendaView';
+  const activeView = document.querySelector('.app-view.active-view')?.id || 'nuevaView';
   if(activeView === 'agendaView'){
     const fecha = document.getElementById('dateInput').value || todayStr();
     document.getElementById('timelineDate').textContent = fmtFecha(fecha);
@@ -2665,19 +2685,10 @@ function renderAll(){
 }
 
 /* ---------- actualización automática ---------- */
-// Refresca agenda, timeline y disponibilidad cada 20s, sin recargar la página
-// ni tocar lo que el usuario ya escribió/eligió en el formulario.
+// No hacemos consultas periódicas. Las reservas se cargan bajo demanda al
+// consultar una fecha. Esto evita llamadas repetidas a Google Sheets.
 async function autoRefresh(){
-  if(isBusy || !scriptConfigurado()) return;
-  const activeView = document.querySelector('.app-view.active-view')?.id || 'agendaView';
-  if(activeView !== 'agendaView') return;
-  try{
-    const agendaFecha = document.getElementById('dateInput').value||todayStr();
-    await loadReservas(agendaFecha, true);
-    renderAll();
-  }catch(e){
-    // Conserva los últimos datos válidos y reintenta en el próximo ciclo.
-  }
+  return;
 }
 
 // La agenda solo permite operar entre hoy y un mes hacia adelante — salvo en
@@ -2727,23 +2738,32 @@ async function init(){
       '<div class="empty-state">Falta pegar la URL de Apps Script en la constante APPS_SCRIPT_URL, dentro del código del sitio.</div>';
   } else {
     try{
+      // Bootstrap liviano: trae solo configuración, profesores, cursos y estado
+      // de equipos. Las reservas NO se consultan al abrir la página.
       const boot = await fetch(`${APPS_SCRIPT_URL}?action=bootstrap`, {cache:'default'}).then(r=>r.json());
       if(boot.error) throw new Error(boot.error);
-      reservasPorFecha.set(hoy, boot.reservas || []);
-      reservasCacheTimestamps.set(hoy, Date.now());
-      reservas = boot.reservas || [];
       profesoresList = boot.profesores || [];
       cursosList = boot.cursos || [];
       aplicarEquiposEstado(boot.equipos || []);
     }catch(e){
       document.getElementById('agendaList').innerHTML =
-        '<div class="empty-state">No se pudo conectar con la planilla. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
+        '<div class="empty-state">No se pudo cargar la configuración inicial. Revisá que la URL de Apps Script sea correcta y que esté implementada como "Cualquier usuario".</div>';
     }
   }
+  reservas = [];
   renderAll();
+  document.getElementById('agendaList').innerHTML = '<div class="empty-state">📅 Elegí una fecha y presioná <strong>Consultar</strong> para cargar sus reservas.</div>';
   renderSelectsFormulario();
 
-  document.getElementById('dateInput').addEventListener('change',async()=>{const fecha=document.getElementById('dateInput').value||todayStr();document.getElementById('agendaList').innerHTML='<div class="loading">Cargando reservas del día…</div>';try{await loadReservas(fecha);renderAll();}catch(e){document.getElementById('agendaList').innerHTML='<div class="empty-state">No se pudieron cargar las reservas de este día.</div>';}});
+  const consultarAgenda = async () => {
+    const fecha=document.getElementById('dateInput').value||todayStr();
+    const listEl=document.getElementById('agendaList');
+    listEl.innerHTML='<div class="loading">Cargando reservas del día…</div>';
+    try{await loadReservas(fecha);renderAll();}
+    catch(e){listEl.innerHTML='<div class="empty-state">No se pudieron cargar las reservas de este día.</div>';}
+  };
+  document.getElementById('btnConsultarAgenda').addEventListener('click', consultarAgenda);
+  document.getElementById('dateInput').addEventListener('change', consultarAgenda);
   document.getElementById('fNombre').addEventListener('change', () => {
     nombreAlumno = document.getElementById('fNombre').value === 'Alumno'
       ? document.getElementById('fNombreAlumno').value.trim()
@@ -2755,7 +2775,7 @@ async function init(){
     nombreAlumno = ev.target.value.trim();
     renderReservationSummary();
   });
-  document.getElementById('fFecha').addEventListener('change', async () => {
+  const consultarDisponibilidad = async () => {
     const fecha = document.getElementById('fFecha').value || todayStr();
     const estado = document.getElementById('formFechaEstado');
     estado.className='availability-status loading'; estado.textContent='Consultando disponibilidad…';
@@ -2768,7 +2788,9 @@ async function init(){
     } catch(e) {
       estado.className='availability-status error'; estado.textContent='No se pudo cargar la disponibilidad de esa fecha.';
     }
-  });
+  };
+  document.getElementById('fFecha').addEventListener('change', consultarDisponibilidad);
+  document.getElementById('btnConsultarDisponibilidad').addEventListener('click', consultarDisponibilidad);
   document.getElementById('fRetiro').addEventListener('change', () => { updateDevolOptions(); renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderReservationSummary(); });
   document.getElementById('fDevol').addEventListener('change', () => { renderGrupoChips(); renderSeccionPlataforma(); renderSeatGrid(); renderExtrasGrid(); renderReservationSummary(); });
   let busquedaTimer = null;
@@ -2835,8 +2857,6 @@ async function init(){
   document.getElementById('historialOverlay').addEventListener('click', (ev) => {
     if(ev.target.id === 'historialOverlay') cerrarModalHistorial();
   });
-
-  setInterval(autoRefresh, 60000);
 
   document.querySelectorAll('.nav-btn').forEach(btn => btn.addEventListener('click', () => cambiarVista(btn.dataset.view)));
   document.getElementById('btnFechaAnterior').addEventListener('click', () => moverFechaAgenda(-1));
