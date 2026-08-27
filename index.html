@@ -814,8 +814,15 @@ function indiceHorarioMasCercano(hora, tipo){
 // grupos de netbooks: se eligen unidades individuales, tipo mapa de asientos
 const GRUPOS_NETBOOKS = [
   { id:'carrito_netbooks',  nombre:'Carrito Edutec',    total:30 },
-  { id:'sueltas_netbooks',  nombre:'Netbooks sueltas',  total:14 },
+  { id:'sueltas_netbooks',  nombre:'Netbooks sueltas',  total:14,
+    unidades:[1,2,5,10,11,14,24,17,21,22,23,25,27,28] },
 ];
+function unidadesDelGrupo(g){
+  return Array.isArray(g.unidades) ? g.unidades : Array.from({length:g.total},(_,i)=>i+1);
+}
+function unidadesLibresDelGrupo(g, ocupadas, fuera){
+  return unidadesDelGrupo(g).filter(n => !ocupadas.has(n) && !fuera.has(n) && equipoActivo(g.id,n)).length;
+}
 
 // equipamiento extra: se suma con un chip "+", el sistema asigna la unidad libre
 const EXTRAS = [
@@ -831,7 +838,8 @@ function claveEquipo(grupo, unidad){ return String(grupo)+'|'+String(unidad); }
 function equipoActivo(grupo, unidad){ const e=equiposEstado.get(claveEquipo(grupo,unidad)); return e ? e.activo !== false : true; }
 function equiposFueraServicio(fecha, grupoId){
   const set=new Set();
-  for(let n=1;n<=((grupoById(grupoId)||{}).total||0);n++) if(!equipoActivo(grupoId,n)) set.add(n);
+  const g=grupoById(grupoId);
+  unidadesDelGrupo(g).forEach(n=>{ if(!equipoActivo(grupoId,n)) set.add(n); });
   return set;
 }
 function aplicarEquiposEstado(lista){
@@ -1453,7 +1461,7 @@ function renderGrupoChips(){
   cont.innerHTML = GRUPOS_NETBOOKS.map(g => {
     const ocupadas = consultada ? unidadesOcupadas(ctx.fecha, g.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
     const fuera = consultada ? equiposFueraServicio(ctx.fecha, g.id) : new Set();
-    const libres = consultada ? Math.max(0, g.total - ocupadas.size - fuera.size) : 0;
+    const libres = consultada ? unidadesLibresDelGrupo(g, ocupadas, fuera) : 0;
     const activo = gruposSeleccionados.has(g.id) ? 'active' : '';
     const disabled = !consultada ? 'disabled' : '';
     return `<div class="chip ${activo} ${disabled}" data-grupo="${g.id}" title="${consultada?'':'Primero consultá la disponibilidad de la fecha'}">${g.nombre} <span style="opacity:.7">${consultada?`(${libres}/${g.total} libres)`:'(consultá fecha)'}</span></div>`;
@@ -1514,7 +1522,7 @@ function renderSeccionPlataforma(){
     const sueltas = GRUPOS_NETBOOKS.find(g => g.id === 'sueltas_netbooks');
     const ocupadasSueltas = ctx.fecha ? unidadesOcupadas(ctx.fecha, sueltas.id, ctx.retiroIdx, ctx.devolIdx, reservaEditandoId) : new Set();
     const fueraSueltas = equiposFueraServicio(ctx.fecha, sueltas.id);
-    const libresSueltas = Math.max(0, sueltas.total - ocupadasSueltas.size - fueraSueltas.size);
+    const libresSueltas = unidadesLibresDelGrupo(sueltas, ocupadasSueltas, fueraSueltas);
     if(libresSueltas > 0){
       nudgeHtml = `<div class="uso-nudge show">Para otros usos hay ${libresSueltas} netbook${libresSueltas===1?'':'s'} suelta${libresSueltas===1?'':'s'} libre${libresSueltas===1?'':'s'} en este horario.</div>`;
     }
@@ -1557,12 +1565,12 @@ function renderSeatGrid(){
     const ocupadas = ctx.fecha ? unidadesOcupadas(ctx.fecha,g.id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId) : new Set();
     unidadesSeleccionadas[g.id].forEach(n=>{ if(ocupadas.has(n) || !equipoActivo(g.id,n)) unidadesSeleccionadas[g.id].delete(n); });
     const fuera = equiposFueraServicio(ctx.fecha, g.id);
-    const libres = Math.max(0,g.total-ocupadas.size-fuera.size);
+    const libres = unidadesLibresDelGrupo(g, ocupadas, fuera);
     if(!modoSeleccionManual[g.id]){
       const qty=Math.min(Math.max(0,cantidadesSeleccionadas[g.id]||0),libres);
       cantidadesSeleccionadas[g.id]=qty;
       const disponibles=[];
-      for(let n=1;n<=g.total;n++) if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n);
+      unidadesDelGrupo(g).forEach(n=>{ if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n); });
       unidadesSeleccionadas[g.id]=new Set(disponibles.slice(0,qty));
     } else {
       cantidadesSeleccionadas[g.id]=unidadesSeleccionadas[g.id].size;
@@ -1574,9 +1582,9 @@ function renderSeatGrid(){
     const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,g.id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
     const seleccion=unidadesSeleccionadas[g.id];
     const fuera=equiposFueraServicio(ctx.fecha,g.id);
-    const libres=Math.max(0,g.total-ocupadas.size-fuera.size);
+    const libres=unidadesLibresDelGrupo(g, ocupadas, fuera);
     const qty=Math.min(cantidadesSeleccionadas[g.id]||0,libres);
-    const seats=Array.from({length:g.total},(_,i)=>i+1).map(n=>{
+    const seats=unidadesDelGrupo(g).map(n=>{
       const occ=ocupadas.has(n), baja=fuera.has(n), sel=seleccion.has(n);
       return `<div class="seat ${occ?'occupied':(baja?'technical-down':(sel?'selected':''))}" data-group="${g.id}" data-n="${n}" title="${baja?'Equipo fuera de servicio':(occ?'Equipo ocupado':'Equipo disponible')}">${n}</div>`;
     }).join('');
@@ -1601,7 +1609,7 @@ function renderSeatGrid(){
     const id=btn.dataset.group; const g=grupoById(id);
     const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
     const fuera=equiposFueraServicio(ctx.fecha,g.id);
-    const libres=Math.max(0,g.total-ocupadas.size-fuera.size);
+    const libres=unidadesLibresDelGrupo(g, ocupadas, fuera);
     const delta=btn.dataset.qtyAction==='plus'?1:-1;
     cantidadesSeleccionadas[id]=Math.max(0,Math.min(libres,(cantidadesSeleccionadas[id]||0)+delta));
     modoSeleccionManual[id]=false;
@@ -1613,7 +1621,7 @@ function renderSeatGrid(){
     if(!modoSeleccionManual[id]){
       const g=grupoById(id);
       const ocupadas=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set();
-      const disponibles=[]; for(let n=1;n<=g.total;n++) if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n);
+      const disponibles=[]; unidadesDelGrupo(g).forEach(n=>{ if(!ocupadas.has(n) && equipoActivo(g.id,n)) disponibles.push(n); });
       const qty=Math.min(cantidadesSeleccionadas[id]||0,disponibles.length);
       unidadesSeleccionadas[id]=new Set(disponibles.slice(0,qty));
     }
@@ -1631,7 +1639,7 @@ function renderSeatGrid(){
   hint.textContent=total===0?'Elegí cuántas netbooks vas a utilizar. La asignación se hace automáticamente y podés elegir equipos específicos si lo necesitás.':`Total seleccionado: ${total} netbook${total===1?'':'s'}. Cada equipo queda registrado individualmente.`;
 
   document.getElementById('btnSelAll').onclick=()=>{
-    gruposSeleccionados.forEach(id=>{ modoSeleccionManual[id]=false; const g=grupoById(id); const occ=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set(); const fuera=equiposFueraServicio(ctx.fecha,id); cantidadesSeleccionadas[id]=Math.max(0,g.total-occ.size-fuera.size); });
+    gruposSeleccionados.forEach(id=>{ modoSeleccionManual[id]=false; const g=grupoById(id); const occ=ctx.fecha?unidadesOcupadas(ctx.fecha,id,ctx.retiroIdx,ctx.devolIdx,reservaEditandoId):new Set(); const fuera=equiposFueraServicio(ctx.fecha,id); cantidadesSeleccionadas[id]=unidadesLibresDelGrupo(g, occ, fuera); });
     renderSeatGrid();
   };
   document.getElementById('btnSelNone').onclick=()=>{ gruposSeleccionados.forEach(id=>{ cantidadesSeleccionadas[id]=0; unidadesSeleccionadas[id].clear(); }); renderSeatGrid(); };
